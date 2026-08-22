@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Deep Vein — تعدين واربح</title>
+<title>Deep Vein — النسخة الأصلية الفخمة</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&family=Big+Shoulders+Display:wght@600;700;800&display=swap" rel="stylesheet">
@@ -17,93 +17,203 @@
     --font-body:'Rubik', sans-serif;
   }
   *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color: transparent;}
-  body{ font-family:var(--font-body); background:#000; color:var(--text-hi); overflow:hidden; touch-action: manipulation; }
-  .frame{ width:100%; max-width:430px; height:100vh; background: radial-gradient(ellipse 120% 60% at 50% -10%, rgba(232,163,61,0.10), transparent 55%), var(--bg-deep); position:relative; overflow:hidden; display:flex; flex-direction:column; margin:auto;}
-  .strata{ position:absolute; inset:0; pointer-events:none; opacity:0.5; background-image: repeating-linear-gradient(115deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 46px);}
-  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:18px 18px 10px; z-index:2;}
-  .profile-chip{ display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:100px; padding:6px 14px;}
-  .avatar{ width:34px; height:34px; border-radius:50%; background:conic-gradient(from 210deg, var(--ore-gold), var(--vein-teal), var(--ore-gold)); display:flex; align-items:center; justify-content:center; color:#0A0C10; font-weight:800;}
-  .balance-pill{ display:flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--ore-gold-dim); border-radius:100px; padding:8px 14px;}
-  .balance-pill .num{ font-family:var(--font-display); font-weight:700; font-size:16px;}
-  .screen{ flex:1; overflow-y:auto; padding-bottom:100px; scrollbar-width:none; z-index:5;}
-  .hidden{display:none !important;}
-  .home-hero{ text-align:center; padding:6px 24px 0;}
-  .hero-title{ font-family:var(--font-display); font-weight:800; font-size:34px; background:linear-gradient(180deg, #FFE9C2, var(--ore-gold) 70%); -webkit-background-clip:text; color:transparent;}
-  .tap-zone{ position:relative; display:flex; align-items:center; justify-content:center; height:290px;}
-  .tap-btn{ width:180px; height:180px; border-radius:50%; border:none; cursor:pointer; background: radial-gradient(circle at 32% 28%, #FFD98A, var(--ore-gold) 45%, #A5701F); box-shadow: 0 0 40px rgba(232,163,61,0.35), inset 0 -10px 24px rgba(0,0,0,0.35); transition:transform 0.08s ease; z-index:3; font-size: 70px;}
-  .energy-block{ padding:0 24px; margin-top:8px;}
-  .energy-bar{ height:9px; border-radius:100px; background:var(--surface-2); border:1px solid var(--line); overflow:hidden;}
-  .energy-fill{ height:100%; width:100%; background:linear-gradient(90deg, var(--vein-teal-dim), var(--vein-teal)); transition:0.3s;}
-  .stat-cards{ display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:20px 24px;}
-  .stat-card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px 14px;}
-  .stat-card .val{ font-family:var(--font-display); font-size:20px; font-weight:700; color:var(--vein-teal);}
-  .navbar{ position:absolute; bottom:0; width:100%; display:flex; justify-content:space-around; background:rgba(18,22,28,0.92); backdrop-filter:blur(14px); border-top:1px solid var(--line); padding:10px 6px 25px; z-index:20;}
-  .nav-btn{ display:flex; flex-direction:column; align-items:center; gap:4px; background:none; border:none; color:var(--text-low); font-size:10.5px;}
-  .nav-btn.active{ color:var(--ore-gold);}
-  .nav-btn svg{ width:21px; height:21px;}
-  .pop{ position:absolute; font-family:var(--font-display); font-weight:800; font-size:24px; color:var(--vein-teal); animation:floatUp 0.8s forwards; pointer-events:none;}
+  html,body{height:100%;}
+  body{
+    font-family:var(--font-body); background:#000; color:var(--text-hi);
+    display:flex; align-items:center; justify-content:center; min-height:100vh;
+    -webkit-font-smoothing:antialiased; overflow: hidden;
+  }
+
+  .frame{
+    width:100%; max-width:430px; height:100vh;
+    background:
+      radial-gradient(ellipse 120% 60% at 50% -10%, rgba(232,163,61,0.10), transparent 55%),
+      radial-gradient(ellipse 100% 50% at 50% 110%, rgba(55,214,190,0.08), transparent 60%),
+      var(--bg-deep);
+    position:relative; overflow:hidden; display:flex; flex-direction:column;
+  }
+
+  .strata{
+    position:absolute; inset:0; pointer-events:none; opacity:0.5;
+    background-image:
+      repeating-linear-gradient(115deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 46px),
+      repeating-linear-gradient(25deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 63px);
+  }
+
+  /* Top Bar */
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:18px 18px 10px; position:relative; z-index:2; }
+  .profile-chip{ display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:100px; padding:6px 14px 6px 6px; }
+  .avatar{
+    width:34px; height:34px; border-radius:50%;
+    background:conic-gradient(from 210deg, var(--ore-gold), var(--vein-teal), var(--ore-gold));
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display); font-weight:700; font-size:15px; color:#0A0C10;
+  }
+  .profile-meta .name{font-size:13px; font-weight:600; line-height:1.1;}
+  .profile-meta .rank{font-size:11px; color:var(--vein-teal); font-weight:500;}
+
+  .balance-pill{ display:flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--ore-gold-dim); border-radius:100px; padding:8px 14px; }
+  .ore-dot{ width:9px; height:9px; border-radius:50%; background:var(--ore-gold); box-shadow:0 0 8px 2px rgba(232,163,61,0.7); }
+  .balance-pill .num{font-family:var(--font-display); font-weight:700; font-size:16px; letter-spacing:0.3px;}
+
+  /* Screens */
+  .screen{ flex:1; overflow-y:auto; position:relative; z-index:2; padding-bottom:100px; scrollbar-width:none; }
+  .screen::-webkit-scrollbar{display:none;}
+  .hidden{ display: none !important; }
+
+  /* HOME UI */
+  .home-hero{ text-align:center; padding:6px 24px 0; }
+  .hero-eyebrow{ font-size:11px; letter-spacing:2.5px; color:var(--text-low); text-transform:uppercase; font-weight:600; }
+  .hero-title{
+    font-family:var(--font-display); font-weight:800; font-size:34px; letter-spacing:0.5px; margin-top:2px;
+    background:linear-gradient(180deg, #FFE9C2, var(--ore-gold) 70%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+
+  .tap-zone{ position:relative; display:flex; align-items:center; justify-content:center; height:290px; margin-top:6px; }
+  .tap-btn{
+    position:relative; z-index:3; width:180px; height:180px; border-radius:50%; border:none; cursor:pointer;
+    background: radial-gradient(circle at 32% 28%, #FFD98A, var(--ore-gold) 45%, #A5701F 100%);
+    box-shadow: 0 0 0 8px rgba(232,163,61,0.08), 0 0 40px rgba(232,163,61,0.35), inset 0 -10px 24px rgba(0,0,0,0.35);
+    display:flex; align-items:center; justify-content:center; transition:transform 0.08s ease;
+  }
+  .tap-btn:active{transform:scale(0.94);}
+  .tap-btn svg{width:72px; height:72px;}
+
+  .energy-block{ padding:0 24px; margin-top:8px; }
+  .energy-row{ display:flex; justify-content:space-between; align-items:baseline; font-size:12px; color:var(--text-mid); margin-bottom:6px; }
+  .energy-bar{ height:9px; border-radius:100px; background:var(--surface-2); border:1px solid var(--line); overflow:hidden; }
+  .energy-fill{ height:100%; border-radius:100px; background:linear-gradient(90deg, var(--vein-teal-dim), var(--vein-teal)); width:100%; transition: 0.3s; }
+
+  .stat-cards{ display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:20px 24px 0; }
+  .stat-card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px 14px; }
+  .stat-card .lbl{font-size:11px; color:var(--text-low); font-weight:500;}
+  .stat-card .val{font-family:var(--font-display); font-size:20px; font-weight:700; margin-top:2px;}
+  .stat-card .val.teal{color:var(--vein-teal);}
+  .stat-card .val.gold{color:var(--ore-gold);}
+
+  /* Navbar */
+  .navbar{
+    position:absolute; bottom:0; left:0; right:0; z-index:5; display:flex; justify-content:space-around;
+    background:rgba(18,22,28,0.92); backdrop-filter:blur(14px); border-top:1px solid var(--line);
+    padding:10px 6px 30px;
+  }
+  .nav-btn{
+    display:flex; flex-direction:column; align-items:center; gap:4px; background:none; border:none;
+    color:var(--text-low); font-size:10.5px; font-weight:500; font-family:var(--font-body);
+  }
+  .nav-btn svg{width:21px; height:21px;}
+  .nav-btn.active{color:var(--ore-gold);}
+
+  /* Sections */
+  .section-head{ padding:20px 20px 10px; font-family:var(--font-display); font-size:22px; color:var(--ore-gold); }
+
+  .float-pop{
+    position:absolute; pointer-events:none; font-family:var(--font-display); font-weight:800; font-size:22px; color:var(--vein-teal);
+    animation:floatUp 0.8s ease-out forwards;
+  }
   @keyframes floatUp{ 0%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-80px);} }
-  .section-head{ padding:20px 20px 10px; font-family:var(--font-display); font-size:24px; color:var(--ore-gold);}
-  .item-card{ display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; margin:0 20px 10px;}
 </style>
 </head>
 <body>
+
 <div class="frame">
   <div class="strata"></div>
+
   <div class="topbar">
-    <div class="profile-chip"><div class="avatar" id="uInit">S</div><div style="font-size:12px; font-weight:600" id="uName">سلطان</div></div>
-    <div class="balance-pill"><span class="num" id="balanceMain">0</span><span style="font-size:10px">ORE</span></div>
+    <div class="profile-chip">
+      <div class="avatar" id="uInit">S</div>
+      <div class="profile-meta">
+        <div class="name" id="uName">سلطان</div>
+        <div class="rank">حفّار من الطبقة الأولى</div>
+      </div>
+    </div>
+    <div class="balance-pill">
+      <span class="ore-dot"></span>
+      <span class="num" id="topBalance">0</span>
+    </div>
   </div>
+
   <div class="screen" id="screen">
+    <!-- HOME -->
     <section id="tab-home">
-      <div class="home-hero"><div class="hero-title">DEEP VEIN</div></div>
-      <div class="tap-zone"><button class="tap-btn" id="tapBtn">⛏️</button></div>
-      <div class="energy-block"><div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;"><span>الطاقة</span><b id="eText">1000/1000</b></div><div class="energy-bar"><div class="energy-fill" id="eFill"></div></div></div>
-      <div class="stat-cards"><div class="stat-card"><div>لكل ضغطة</div><div class="val">+2</div></div><div class="stat-card"><div>الربح الساعي</div><div class="val" style="color:var(--ore-gold)">0</div></div></div>
+      <div class="home-hero">
+        <div class="hero-eyebrow">DEEP VEIN</div>
+        <div class="hero-title">اضغط. عدّن. اربح.</div>
+      </div>
+      <div class="tap-zone" id="tapZone">
+        <button class="tap-btn" id="tapBtn">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 20L14 10M14 10L10 6L18 2L22 6L18 14L14 10Z" stroke="#241802" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="energy-block">
+        <div class="energy-row"><span>الطاقة</span><b id="eText">1000 / 1000</b></div>
+        <div class="energy-bar"><div class="energy-fill" id="eFill"></div></div>
+      </div>
+      <div class="stat-cards">
+        <div class="stat-card"><div class="lbl">أرباح الضغطة</div><div class="val gold">+2 ORE</div></div>
+        <div class="stat-card"><div class="lbl">معدل التعدين</div><div class="val teal">0 ORE</div></div>
+      </div>
     </section>
-    <section id="tab-tasks" class="hidden"><h2 class="section-head">المهام اليومية</h2><div class="item-card"><div style="flex:1">انضم للقناة</div><button style="background:var(--vein-teal); border:none; padding:8px 15px; border-radius:10px;">إتمام</button></div></section>
-    <section id="tab-redeem" class="hidden"><h2 class="section-head">استبدال الجوائز</h2><div class="item-card">قريباً.. سكنات ومعاول نادرة.</div></section>
-    <section id="tab-ref" class="hidden"><h2 class="section-head">دعوة الأصدقاء</h2><div class="item-card" style="text-align:center; display:block">رابط الإحالة:<br><br><div id="refLink" style="background:#000; padding:10px; border-radius:10px; font-size:11px">t.me/DeepVeinBot?start=r_123</div></div></section>
-    <section id="tab-wallet" class="hidden"><h2 class="section-head">الأرباح الحقيقية</h2><div style="background:var(--surface); margin:20px; padding:30px; border-radius:20px; text-align:center;"><div style="color:var(--vein-teal); font-size:45px;">$0.00</div></div></section>
-    <section id="tab-prices" class="hidden"><h2 class="section-head">أسعار العملات</h2><div class="item-card" style="justify-content:space-between"><span>USDT</span><b>$1.00</b></div><div class="item-card" style="justify-content:space-between"><span>TON</span><b>$5.35</b></div></section>
+
+    <!-- OTHER TABS -->
+    <section id="tab-tasks" class="hidden"><h2 class="section-head">المهام اليومية</h2></section>
+    <section id="tab-redeem" class="hidden"><h2 class="section-head">استبدال الجوائز</h2></section>
+    <section id="tab-ref" class="hidden"><h2 class="section-head">ادعُ أصدقاءك</h2></section>
+    <section id="tab-wallet" class="hidden"><h2 class="section-head">الأرباح الحقيقية</h2></section>
+    <section id="tab-prices" class="hidden"><h2 class="section-head">أسعار العملات</h2></section>
   </div>
-  <nav class="navbar">
-    <button class="nav-btn active" onclick="switchTab('home', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20L14 10M14 10L10 6L18 2L22 6L18 14L14 10Z"/></svg>تعدين</button>
-    <button class="nav-btn" onclick="switchTab('tasks', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>مهام</button>
-    <button class="nav-btn" onclick="switchTab('redeem', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>استبدال</button>
-    <button class="nav-btn" onclick="switchTab('ref', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>دعوة</button>
-    <button class="nav-btn" onclick="switchTab('wallet', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>أرباح</button>
-    <button class="nav-btn" onclick="switchTab('prices', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg>أسعار</button>
-  </nav>
+
+  <div class="navbar">
+    <button class="nav-btn active" onclick="switchTab('home', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20L14 10M14 10L10 6L18 2L22 6L18 14L14 10Z" stroke-linejoin="round" stroke-linecap="round"/></svg>تعدين</button>
+    <button class="nav-btn" onclick="switchTab('tasks', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>مهام</button>
+    <button class="nav-btn" onclick="switchTab('redeem', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>استبدال</button>
+    <button class="nav-btn" onclick="switchTab('ref', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>دعوة</button>
+    <button class="nav-btn" onclick="switchTab('wallet', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>أرباح</button>
+    <button class="nav-btn" onclick="switchTab('prices', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg>أسعار</button>
+  </div>
 </div>
+
 <script>
-  let balance = parseInt(localStorage.getItem('db_bal')) || 0;
+  let balance = parseInt(localStorage.getItem('orig_bal')) || 0;
   let energy = 1000;
+  const topBal = document.getElementById('topBalance');
+  const eFill = document.getElementById('eFill');
+  const eText = document.getElementById('eText');
+
   function updateUI() {
-    document.getElementById('balanceMain').textContent = balance.toLocaleString();
-    document.getElementById('eText').textContent = energy + "/1000";
-    document.getElementById('eFill').style.width = (energy/10) + "%";
-    localStorage.setItem('db_bal', balance);
+    topBal.textContent = balance.toLocaleString();
+    eText.textContent = energy + " / 1000";
+    eFill.style.width = (energy / 10) + "%";
+    localStorage.setItem('orig_bal', balance);
   }
+
   document.getElementById('tapBtn').addEventListener('click', (e) => {
     if(energy <= 0) return;
     balance += 2; energy -= 1; updateUI();
-    const pop = document.createElement('div'); pop.className = 'pop'; pop.textContent = '+2';
+    
+    const pop = document.createElement('div');
+    pop.className = 'float-pop'; pop.textContent = '+2';
     pop.style.left = e.pageX + 'px'; pop.style.top = e.pageY + 'px';
-    document.body.appendChild(pop); setTimeout(()=>pop.remove(), 800);
+    document.body.appendChild(pop); setTimeout(() => pop.remove(), 800);
+    
     if(window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
   });
+
   setInterval(() => { if(energy < 1000) { energy += 1; updateUI(); } }, 1500);
+
   function switchTab(id, btn) {
     document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
     document.getElementById('tab-' + id).classList.remove('hidden');
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
-  const webapp = window.Telegram.WebApp; webapp.expand();
-  if(webapp.initDataUnsafe.user) {
-    document.getElementById('uName').textContent = webapp.initDataUnsafe.user.first_name;
-    document.getElementById('uInit').textContent = webapp.initDataUnsafe.user.first_name.charAt(0).toUpperCase();
+
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+  if(tg.initDataUnsafe.user) {
+    document.getElementById('uName').textContent = tg.initDataUnsafe.user.first_name;
+    document.getElementById('uInit').textContent = tg.initDataUnsafe.user.first_name.charAt(0).toUpperCase();
   }
   updateUI();
 </script>
