@@ -3,104 +3,89 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Deep Vein Pro</title>
+<title>Deep Vein — تعدين واربح</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&family=Big+Shoulders+Display:wght@800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&family=Big+Shoulders+Display:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg-deep:#0A0C10; --surface:#1A1F27; --line:#2A313D; --ore-gold:#E8A33D; --vein-teal:#37D6BE; --text-hi:#F3EFE6; --text-low:#5E6672;
+    --bg-deep:#0A0C10; --bg-cave:#12161C; --surface:#1A1F27; --surface-2:#222834;
+    --line:#2A313D; --ore-gold:#E8A33D; --ore-gold-dim:#8C6624;
+    --vein-teal:#37D6BE; --vein-teal-dim:#1E5F55; --text-hi:#F3EFE6;
+    --text-mid:#A7ADB8; --text-low:#5E6672; --danger:#E0654F;
+    --font-display:'Big Shoulders Display', sans-serif;
+    --font-body:'Rubik', sans-serif;
   }
   *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color: transparent;}
-  body{ font-family:'Rubik', sans-serif; background:var(--bg-deep); color:var(--text-hi); overflow:hidden; touch-action: manipulation;}
-  .frame{ width:100%; max-width:430px; height:100vh; margin:auto; display:flex; flex-direction:column; position:relative; background: radial-gradient(circle at 50% -10%, rgba(232,163,61,0.15), transparent 60%);}
-  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:15px; z-index:10;}
-  .balance-pill{ display:flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--ore-gold); border-radius:100px; padding:8px 16px;}
-  .balance-pill .num{ font-family:'Big Shoulders Display'; font-size:22px; color:var(--ore-gold);}
-  .screen{ flex:1; overflow-y:auto; padding-bottom:100px; scrollbar-width:none;}
+  body{ font-family:var(--font-body); background:#000; color:var(--text-hi); overflow:hidden; touch-action: manipulation; }
+  .frame{ width:100%; max-width:430px; height:100vh; background: radial-gradient(ellipse 120% 60% at 50% -10%, rgba(232,163,61,0.10), transparent 55%), var(--bg-deep); position:relative; overflow:hidden; display:flex; flex-direction:column; margin:auto;}
+  .strata{ position:absolute; inset:0; pointer-events:none; opacity:0.5; background-image: repeating-linear-gradient(115deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 46px);}
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:18px 18px 10px; z-index:2;}
+  .profile-chip{ display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:100px; padding:6px 14px;}
+  .avatar{ width:34px; height:34px; border-radius:50%; background:conic-gradient(from 210deg, var(--ore-gold), var(--vein-teal), var(--ore-gold)); display:flex; align-items:center; justify-content:center; color:#0A0C10; font-weight:800;}
+  .balance-pill{ display:flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--ore-gold-dim); border-radius:100px; padding:8px 14px;}
+  .balance-pill .num{ font-family:var(--font-display); font-weight:700; font-size:16px;}
+  .screen{ flex:1; overflow-y:auto; padding-bottom:100px; scrollbar-width:none; z-index:5;}
   .hidden{display:none !important;}
-  .tap-zone{ position:relative; height:300px; display:flex; align-items:center; justify-content:center;}
-  .tap-btn{ width:200px; height:200px; border-radius:50%; border:none; background:radial-gradient(circle, #FFD98A, var(--ore-gold)); box-shadow: 0 0 50px rgba(232,163,61,0.3); cursor:pointer; font-size:80px;}
-  .energy-bar-bg{ height:12px; background:#222834; border-radius:10px; margin:20px; overflow:hidden;}
-  .energy-fill{ height:100%; width:100%; background:linear-gradient(90deg, var(--vein-teal), #1E5F55); transition: 0.3s;}
-  .stat-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; padding:0 20px;}
-  .stat-card{ background:var(--surface); padding:15px; border-radius:15px; text-align:center; border:1px solid var(--line);}
-  .item-card{ display:flex; align-items:center; gap:12px; background:var(--surface); margin:10px 20px; padding:15px; border-radius:15px; border:1px solid var(--line);}
-  .navbar{ position:absolute; bottom:0; width:100%; height:80px; background:rgba(18,22,28,0.95); display:flex; justify-content:space-around; align-items:center; border-top:1px solid var(--line); padding-bottom:10px;}
-  .nav-item{ background:none; border:none; color:var(--text-low); font-size:11px; display:flex; flex-direction:column; align-items:center; gap:4px;}
-  .nav-item.active{ color:var(--ore-gold);}
-  .pop{ position:absolute; font-weight:800; font-size:30px; color:var(--vein-teal); animation: floatUp 0.8s forwards; pointer-events:none;}
-  @keyframes floatUp { 0%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-100px);} }
+  .home-hero{ text-align:center; padding:6px 24px 0;}
+  .hero-title{ font-family:var(--font-display); font-weight:800; font-size:34px; background:linear-gradient(180deg, #FFE9C2, var(--ore-gold) 70%); -webkit-background-clip:text; color:transparent;}
+  .tap-zone{ position:relative; display:flex; align-items:center; justify-content:center; height:290px;}
+  .tap-btn{ width:180px; height:180px; border-radius:50%; border:none; cursor:pointer; background: radial-gradient(circle at 32% 28%, #FFD98A, var(--ore-gold) 45%, #A5701F); box-shadow: 0 0 40px rgba(232,163,61,0.35), inset 0 -10px 24px rgba(0,0,0,0.35); transition:transform 0.08s ease; z-index:3; font-size: 70px;}
+  .energy-block{ padding:0 24px; margin-top:8px;}
+  .energy-bar{ height:9px; border-radius:100px; background:var(--surface-2); border:1px solid var(--line); overflow:hidden;}
+  .energy-fill{ height:100%; width:100%; background:linear-gradient(90deg, var(--vein-teal-dim), var(--vein-teal)); transition:0.3s;}
+  .stat-cards{ display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:20px 24px;}
+  .stat-card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px 14px;}
+  .stat-card .val{ font-family:var(--font-display); font-size:20px; font-weight:700; color:var(--vein-teal);}
+  .navbar{ position:absolute; bottom:0; width:100%; display:flex; justify-content:space-around; background:rgba(18,22,28,0.92); backdrop-filter:blur(14px); border-top:1px solid var(--line); padding:10px 6px 25px; z-index:20;}
+  .nav-btn{ display:flex; flex-direction:column; align-items:center; gap:4px; background:none; border:none; color:var(--text-low); font-size:10.5px;}
+  .nav-btn.active{ color:var(--ore-gold);}
+  .nav-btn svg{ width:21px; height:21px;}
+  .pop{ position:absolute; font-family:var(--font-display); font-weight:800; font-size:24px; color:var(--vein-teal); animation:floatUp 0.8s forwards; pointer-events:none;}
+  @keyframes floatUp{ 0%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-80px);} }
+  .section-head{ padding:20px 20px 10px; font-family:var(--font-display); font-size:24px; color:var(--ore-gold);}
+  .item-card{ display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; margin:0 20px 10px;}
 </style>
 </head>
 <body>
 <div class="frame">
+  <div class="strata"></div>
   <div class="topbar">
-    <div style="font-weight:bold" id="uName">لاعب</div>
-    <div class="balance-pill"><span class="num" id="balanceMain">0</span><span>ORE</span></div>
+    <div class="profile-chip"><div class="avatar" id="uInit">S</div><div style="font-size:12px; font-weight:600" id="uName">سلطان</div></div>
+    <div class="balance-pill"><span class="num" id="balanceMain">0</span><span style="font-size:10px">ORE</span></div>
   </div>
-  <div class="screen">
-    <!-- التعدين -->
+  <div class="screen" id="screen">
     <section id="tab-home">
-      <h1 style="text-align:center; font-family:'Big Shoulders Display'; font-size:40px; margin:10px 0;">DEEP VEIN</h1>
+      <div class="home-hero"><div class="hero-title">DEEP VEIN</div></div>
       <div class="tap-zone"><button class="tap-btn" id="tapBtn">⛏️</button></div>
-      <div class="energy-bar-bg"><div class="energy-fill" id="energyFill"></div></div>
-      <div class="stat-grid">
-        <div class="stat-card"><div>لكل ضغطة</div><div style="color:var(--vein-teal); font-weight:bold;">+2</div></div>
-        <div class="stat-card"><div>الربح الساعي</div><div style="color:var(--ore-gold); font-weight:bold;">0</div></div>
-      </div>
+      <div class="energy-block"><div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;"><span>الطاقة</span><b id="eText">1000/1000</b></div><div class="energy-bar"><div class="energy-fill" id="eFill"></div></div></div>
+      <div class="stat-cards"><div class="stat-card"><div>لكل ضغطة</div><div class="val">+2</div></div><div class="stat-card"><div>الربح الساعي</div><div class="val" style="color:var(--ore-gold)">0</div></div></div>
     </section>
-    <!-- المهام -->
-    <section id="tab-tasks" class="hidden">
-      <h2 style="padding:20px; color:var(--ore-gold)">قائمة المهام 📋</h2>
-      <div class="item-card"><div style="flex:1"><b>انضم لقناتنا</b><br><small style="color:var(--vein-teal)">+1,000 ORE</small></div><button onclick="this.textContent='تم ✅'" style="background:var(--vein-teal); border:none; padding:8px 15px; border-radius:10px;">إتمام</button></div>
-      <div class="item-card"><div style="flex:1"><b>شاهد إعلان مكافأة</b><br><small style="color:var(--vein-teal)">+500 ORE</small></div><button onclick="this.textContent='تم ✅'" style="background:var(--vein-teal); border:none; padding:8px 15px; border-radius:10px;">مشاهدة</button></div>
-    </section>
-    <!-- الأصدقاء -->
-    <section id="tab-friends" class="hidden">
-      <h2 style="padding:20px; color:var(--ore-gold)">دعوة الأصدقاء 👥</h2>
-      <div class="item-card" style="display:block; text-align:center;">
-        <p>رابط الإحالة الخاص بك:</p>
-        <div style="background:#000; padding:10px; margin:10px 0; border-radius:10px; font-size:11px;" id="refLink">t.me/DeepVeinBot?start=r_123</div>
-        <button onclick="copyRef()" style="background:var(--ore-gold); border:none; padding:10px 20px; border-radius:10px; font-weight:bold;">نسخ الرابط</button>
-      </div>
-    </section>
-    <!-- الأرباح -->
-    <section id="tab-wallet" class="hidden">
-      <h2 style="padding:20px; color:var(--ore-gold)">المحفظة 💰</h2>
-      <div style="background:var(--surface); margin:0 20px; padding:30px; border-radius:20px; text-align:center;">
-        <div style="font-size:14px; color:var(--text-low)">الرصيد المتاح للسحب</div>
-        <div style="font-size:45px; color:var(--vein-teal); font-family:'Big Shoulders Display';">$0.00</div>
-      </div>
-      <div style="padding:20px; font-size:12px; color:var(--text-low)">* يتطلب السحب دعوة 10 أصدقاء والوصول للمستوى 5.</div>
-    </section>
-    <!-- الأسعار -->
-    <section id="tab-prices" class="hidden">
-      <h2 style="padding:20px; color:var(--ore-gold)">أسعار السوق 📈</h2>
-      <div class="item-card" style="justify-content:space-between"><span>Tether (USDT)</span><b>$1.00</b></div>
-      <div class="item-card" style="justify-content:space-between"><span>Toncoin (TON)</span><b>$5.35</b></div>
-    </section>
+    <section id="tab-tasks" class="hidden"><h2 class="section-head">المهام اليومية</h2><div class="item-card"><div style="flex:1">انضم للقناة</div><button style="background:var(--vein-teal); border:none; padding:8px 15px; border-radius:10px;">إتمام</button></div></section>
+    <section id="tab-redeem" class="hidden"><h2 class="section-head">استبدال الجوائز</h2><div class="item-card">قريباً.. سكنات ومعاول نادرة.</div></section>
+    <section id="tab-ref" class="hidden"><h2 class="section-head">دعوة الأصدقاء</h2><div class="item-card" style="text-align:center; display:block">رابط الإحالة:<br><br><div id="refLink" style="background:#000; padding:10px; border-radius:10px; font-size:11px">t.me/DeepVeinBot?start=r_123</div></div></section>
+    <section id="tab-wallet" class="hidden"><h2 class="section-head">الأرباح الحقيقية</h2><div style="background:var(--surface); margin:20px; padding:30px; border-radius:20px; text-align:center;"><div style="color:var(--vein-teal); font-size:45px;">$0.00</div></div></section>
+    <section id="tab-prices" class="hidden"><h2 class="section-head">أسعار العملات</h2><div class="item-card" style="justify-content:space-between"><span>USDT</span><b>$1.00</b></div><div class="item-card" style="justify-content:space-between"><span>TON</span><b>$5.35</b></div></section>
   </div>
   <nav class="navbar">
-    <button class="nav-item active" onclick="switchTab('home', this)">⛏️<span>تعدين</span></button>
-    <button class="nav-item" onclick="switchTab('tasks', this)">📋<span>مهام</span></button>
-    <button class="nav-item" onclick="switchTab('friends', this)">👥<span>أصدقاء</span></button>
-    <button class="nav-item" onclick="switchTab('wallet', this)">💰<span>أرباح</span></button>
-    <button class="nav-item" onclick="switchTab('prices', this)">📈<span>أسعار</span></button>
+    <button class="nav-btn active" onclick="switchTab('home', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20L14 10M14 10L10 6L18 2L22 6L18 14L14 10Z"/></svg>تعدين</button>
+    <button class="nav-btn" onclick="switchTab('tasks', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>مهام</button>
+    <button class="nav-btn" onclick="switchTab('redeem', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>استبدال</button>
+    <button class="nav-btn" onclick="switchTab('ref', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>دعوة</button>
+    <button class="nav-btn" onclick="switchTab('wallet', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>أرباح</button>
+    <button class="nav-btn" onclick="switchTab('prices', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg>أسعار</button>
   </nav>
 </div>
 <script>
   let balance = parseInt(localStorage.getItem('db_bal')) || 0;
   let energy = 1000;
-  const tapBtn = document.getElementById('tapBtn');
-  const balEl = document.getElementById('balanceMain');
-  const eFill = document.getElementById('energyFill');
-
   function updateUI() {
-    balEl.textContent = balance.toLocaleString();
-    eFill.style.width = (energy/10) + "%";
+    document.getElementById('balanceMain').textContent = balance.toLocaleString();
+    document.getElementById('eText').textContent = energy + "/1000";
+    document.getElementById('eFill').style.width = (energy/10) + "%";
     localStorage.setItem('db_bal', balance);
   }
-  tapBtn.addEventListener('click', (e) => {
+  document.getElementById('tapBtn').addEventListener('click', (e) => {
     if(energy <= 0) return;
     balance += 2; energy -= 1; updateUI();
     const pop = document.createElement('div'); pop.className = 'pop'; pop.textContent = '+2';
@@ -112,13 +97,13 @@
   function switchTab(id, btn) {
     document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
     document.getElementById('tab-' + id).classList.remove('hidden');
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
   const webapp = window.Telegram.WebApp; webapp.expand();
   if(webapp.initDataUnsafe.user) {
     document.getElementById('uName').textContent = webapp.initDataUnsafe.user.first_name;
-    document.getElementById('refLink').textContent = "t.me/nabdbooks_bot/mining?start=r_" + webapp.initDataUnsafe.user.id;
+    document.getElementById('uInit').textContent = webapp.initDataUnsafe.user.first_name.charAt(0).toUpperCase();
   }
   updateUI();
 </script>
