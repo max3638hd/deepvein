@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Deep Vein Pro</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&family=Big+Shoulders+Display:wght@800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#0A0C10; --bg-cave:#12161C; --surface:#1A1F27; --surface-2:#222834;
+    --line:#2A313D; --ore-gold:#E8A33D; --vein-teal:#37D6BE; --text-hi:#F3EFE6;
+    --text-mid:#A7ADB8; --text-low:#5E6672; --font-display:'Big Shoulders Display', sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color: transparent;}
+  body{ font-family:'Rubik', sans-serif; background:var(--bg-deep); color:var(--text-hi); overflow:hidden; touch-action: manipulation;}
+  .frame{ width:100%; max-width:430px; height:100vh; margin:auto; display:flex; flex-direction:column; position:relative;}
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:18px 18px 10px; z-index:10;}
+  .profile-chip{ display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:100px; padding:6px 14px;}
+  .avatar{ width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, var(--ore-gold), var(--vein-teal)); color:#000; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:12px;}
+  .balance-pill{ display:flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--ore-gold); border-radius:100px; padding:8px 16px;}
+  .balance-pill .num{ font-family:var(--font-display); font-size:20px; font-weight:800; color:var(--ore-gold);}
+  .screen{ flex:1; overflow-y:auto; padding-bottom:100px; scrollbar-width:none;}
+  .hidden{display:none;}
+  .hero-title{ font-family:var(--font-display); font-size:38px; text-align:center; margin-top:10px; background: linear-gradient(180deg, #FFF, var(--ore-gold)); -webkit-background-clip: text; color:transparent; }
+  .tap-zone{ position:relative; height:320px; display:flex; align-items:center; justify-content:center;}
+  .tap-btn{ 
+    width:210px; height:210px; border-radius:50%; border:none; 
+    background:radial-gradient(circle at 30% 30%, #FFD98A, var(--ore-gold) 60%, #A5701F);
+    box-shadow: 0 0 50px rgba(232,163,61,0.25), inset 0 -8px 20px rgba(0,0,0,0.4);
+    cursor:pointer; transition: transform 0.1s; font-size:80px; display:flex; align-items:center; justify-content:center;
+  }
+  .tap-btn:active{ transform: scale(0.92); }
+  .energy-container{ padding:0 25px; margin-top:10px;}
+  .energy-bar-bg{ height:12px; background:var(--surface-2); border-radius:10px; border:1px solid var(--line); overflow:hidden;}
+  .energy-fill{ height:100%; width:100%; background:linear-gradient(90deg, var(--vein-teal), #1E5F55); transition: width 0.3s;}
+  .stat-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; padding:20px;}
+  .stat-card{ background:var(--surface); padding:15px; border-radius:16px; border:1px solid var(--line); text-align:center;}
+  .section-title{ padding:20px 20px 10px; font-family:var(--font-display); font-size:24px; color:var(--ore-gold);}
+  .item-card{ display:flex; align-items:center; gap:12px; background:var(--surface); margin:0 20px 10px; padding:16px; border-radius:18px; border:1px solid var(--line);}
+  .navbar{ position:absolute; bottom:0; width:100%; height:85px; background:rgba(18,22,28,0.95); backdrop-filter:blur(15px); display:flex; justify-content:space-around; align-items:center; padding-bottom:15px; border-top:1px solid var(--line); z-index:20;}
+  .nav-item{ background:none; border:none; color:var(--text-low); display:flex; flex-direction:column; align-items:center; gap:6px; font-size:11px;}
+  .nav-item.active{ color:var(--ore-gold);}
+  .pop{ position:absolute; font-family:var(--font-display); font-weight:800; color:#FFF; font-size:28px; animation: floatUp 0.8s ease-out forwards; pointer-events:none;}
+  @keyframes floatUp { 0%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-120px);} }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="topbar">
+    <div class="profile-chip"><div class="avatar" id="userInitial">U</div><div style="font-size:13px; font-weight:700" id="userName">لاعب</div></div>
+    <div class="balance-pill"><span class="num" id="balanceMain">0</span><span style="font-size:11px; color:var(--text-low);">ORE</span></div>
+  </div>
+  <div class="screen" id="mainScreen">
+    <section id="tab-home">
+      <div class="hero-title">DEEP VEIN</div>
+      <div style="text-align:center; color:var(--vein-teal); font-size:12px;">المستوى: <span id="level">1</span></div>
+      <div class="tap-zone"><button class="tap-btn" id="tapBtn">⛏️</button></div>
+      <div class="energy-container">
+        <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:5px;"><span>طاقة التعدين</span><b id="energyText">1000/1000</b></div>
+        <div class="energy-bar-bg"><div class="energy-fill" id="energyFill"></div></div>
+      </div>
+      <div class="stat-grid"><div class="stat-card"><div>لكل ضغطة</div><div id="tapVal" style="color:var(--vein-teal); font-weight:bold;">+2</div></div><div class="stat-card"><div>الربح الساعي</div><div style="color:var(--ore-gold); font-weight:bold;">0</div></div></div>
+    </section>
+    <section id="tab-tasks" class="hidden"><h2 class="section-title">المهام</h2><div class="item-card"><div style="flex:1">الاشتراك بالقناة</div><button style="background:var(--vein-teal); border:none; padding:8px; border-radius:8px; font-weight:bold;">إتمام</button></div></section>
+    <section id="tab-friends" class="hidden"><h2 class="section-title">الأصدقاء</h2><div class="item-card">ادعُ أصدقاءك واحصل على 500 ORE</div></section>
+    <section id="tab-wallet" class="hidden"><h2 class="section-title">المحفظة</h2><div style="background:var(--surface); margin:20px; padding:30px; border-radius:20px; text-align:center;"><div style="color:var(--vein-teal); font-size:40px;">$0.00</div><div style="font-size:11px; color:var(--text-low)">الحد الأدنى للسحب 20$</div></div></section>
+  </div>
+  <nav class="navbar">
+    <button class="nav-item active" onclick="switchTab('home', this)">⛏️<span>تعدين</span></button>
+    <button class="nav-item" onclick="switchTab('tasks', this)">📋<span>مهام</span></button>
+    <button class="nav-item" onclick="switchTab('friends', this)">👥<span>أصدقاء</span></button>
+    <button class="nav-item" onclick="switchTab('wallet', this)">💰<span>أرباح</span></button>
+  </nav>
+</div>
+<script>
+  let balance = parseInt(localStorage.getItem('balance')) || 0;
+  let energy = 1000;
+  let tapValue = 2;
+  const tapBtn = document.getElementById('tapBtn');
+  const balanceMain = document.getElementById('balanceMain');
+  const energyFill = document.getElementById('energyFill');
+  const energyText = document.getElementById('energyText');
+
+  function updateUI() {
+    balanceMain.textContent = balance.toLocaleString();
+    energyFill.style.width = (energy / 10) + "%";
+    energyText.textContent = energy + " / 1000";
+    localStorage.setItem('balance', balance);
+  }
+  tapBtn.addEventListener('click', (e) => {
+    if (energy <= 0) return;
+    balance += tapValue; energy -= 1; updateUI();
+    const pop = document.createElement('div'); pop.className = 'pop'; pop.textContent = `+${tapValue}`;
+    pop.style.left = (e.pageX || e.touches[0].pageX) + 'px';
+    pop.style.top = (e.pageY || e.touches[0].pageY) + 'px';
+    document.body.appendChild(pop); setTimeout(() => pop.remove(), 800);
+    if(window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+  });
+  setInterval(() => { if(energy < 1000) { energy += 1; updateUI(); } }, 1500);
+  function switchTab(id, btn) {
+    document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+    document.getElementById('tab-'+id).classList.remove('hidden');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  const user = window.Telegram.WebApp.initDataUnsafe.user;
+  if (user) {
+    document.getElementById('userName').textContent = user.first_name;
+    document.getElementById('userInitial').textContent = user.first_name.charAt(0).toUpperCase();
+  }
+  window.Telegram.WebApp.expand();
+  updateUI();
+</script>
+</body>
+</html>
