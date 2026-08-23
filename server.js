@@ -1,10 +1,13 @@
 const express = require('express');
-const mongoose = require('mongoose');
+const { createClient } = require('@supabase/supabase-js');
 const cors = require('cors');
-const crypto = require('crypto');
 require('dotenv').config();
 
-const { User, Task, Referral, Stats } = require('./database');
+// Supabase Setup
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 const app = express();
 
@@ -12,336 +15,259 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// الثوابت
-const BOT_TOKEN = process.env.BOT_TOKEN;
+// Constants
 const ORE_PER_TAP = 2;
 const ENERGY_MAX = 1000;
-const ENERGY_REFILL_RATE = 10;
 const REFERRAL_REWARD_REFERRER = 500;
 const REFERRAL_REWARD_REFERRED = 300;
 const MIN_WITHDRAWAL = 20;
 const WITHDRAWAL_THRESHOLD_LEVEL = 5;
 const MIN_REFERRALS = 10;
 
-// ============ اتصال قاعدة البيانات ============
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ MongoDB connected'))
-  .catch(err => console.error('❌ MongoDB error:', err));
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Deep Vein Server is running' });
+});
 
-// ============ دوال مساعدة ============
-
-function calculateEnergy(user) {
-  const now = new Date();
-  const timeDiff = (now - user.lastEnergyRefill) / 1000;
-  const energyRegen = Math.min(timeDiff * ENERGY_REFILL_RATE, ENERGY_MAX - user.energy);
-  return user.energy + energyRegen;
-}
-
-// ============ API Endpoints ============
-
-// 1️⃣ تسجيل / تحديث المستخدم
+// Register or Update User
 app.post('/api/user/register', async (req, res) => {
   try {
-    const { webAppData } = req.body;
-    
-    const urlParams = new URLSearchParams(webAppData);
-    const userDataStr = urlParams.get('user');
-    const userData = JSON.parse(userDataStr);
-    
-    const { id, username, first_name, last_name } = userData;
-    
-    let user = await User.findOne({ telegramId: id });
-    
-    if (!user) {
-      user = new User({
-        telegramId: id,
-        username: username || `user_${id}`,
-        firstName: first_name,
-        lastName: last_name
-      });
-      await user.save();
-    } else {
-      user.lastActive = new Date();
-      await user.save();
-    }
-    
-    res.json({
-      success: true,
-      user: {
-        telegramId: user.telegramId,
-        ore: user.ore,
-        level: user.level,
-        miningPower: user.upgrades.goldenPickaxe ? ORE_PER_TAP * 2 : ORE_PER_TAP,
-        energy: calculateEnergy(user),
-        energyMax: ENERGY_MAX,
-        referralCount: user.referralCount,
-        username: user.username
-      }
-    });
+    const { telegramId, username } = req.body;
+
+    const { data, error } = await supabase
+      .from('users')
+      .upsert({
+        telegram_id: telegramId,
+        username: username || `user_${telegramId}`,
+        ore: 0,
+        energy: ENERGY_MAX,
+        level: 1,
+        referral_count: 0,
+        total_earned: 0,
+        last_tap: new Date(),
+      })
+      .select();
+
+    if (error) throw error;
+    res.json({ success: true, user: data[0] });
   } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 2️⃣ النقر على الفأس (التعدين)
+// Mining - Tap to earn ORE
 app.post('/api/mining/tap', async (req, res) => {
   try {
     const { telegramId } = req.body;
-    const user = await User.findOne({ telegramId });
-    
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    
-    const currentEnergy = calculateEnergy(user);
-    
-    if (currentEnergy < 1) {
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegramId)
+      .single();
+
+    if (userError) throw userError;
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    if (user.energy <= 0) {
       return res.json({ success: false, message: 'Not enough energy' });
     }
-    
-    const reward = user.upgrades.goldenPickaxe ? ORE_PER_TAP * 2 : ORE_PER_TAP;
-    user.ore += reward;
-    user.energy = currentEnergy - 1;
-    user.lastEnergyRefill = new Date();
-    
-    await user.save();
-    
-    if (user.ore >= user.level * 10000) {
-      user.level += 1;
-      user.miningPower = ORE_PER_TAP + (user.level - 1) * 0.5;
-      await user.save();
-    }
-    
-    res.json({
-      success: true,
-      ore: user.ore,
-      energy: user.energy,
-      level: user.level
-    });
+
+    const { data: updated, error: updateError } = await supabase
+      .from('users')
+      .update({
+        ore: user.ore + ORE_PER_TAP,
+        energy: Math.max(0, user.energy - 1),
+        last_tap: new Date(),
+      })
+      .eq('telegram_id', telegramId)
+      .select();
+
+    if (updateError) throw updateError;
+    res.json({ success: true, user: updated[0] });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 3️⃣ المهام اليومية
+// Get Tasks
 app.get('/api/tasks', async (req, res) => {
   try {
-    const tasks = await Task.find({ isActive: true });
-    res.json({ tasks });
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*');
+
+    if (error) throw error;
+    res.json({ success: true, tasks: data });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 4️⃣ إكمال مهمة
+// Complete Task
 app.post('/api/task/complete', async (req, res) => {
   try {
     const { telegramId, taskId } = req.body;
-    const user = await User.findOne({ telegramId });
-    
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    
-    if (user.completedTasks.includes(taskId)) {
-      return res.json({ success: false, message: 'Task already completed today' });
-    }
-    
-    const task = await Task.findOne({ taskId });
-    if (!task) return res.status(404).json({ error: 'Task not found' });
-    
-    user.ore += task.reward;
-    user.completedTasks.push(taskId);
-    await user.save();
-    
-    res.json({
-      success: true,
-      reward: task.reward,
-      totalOre: user.ore
-    });
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegramId)
+      .single();
+
+    if (userError) throw userError;
+
+    const { data: task, error: taskError } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('id', taskId)
+      .single();
+
+    if (taskError) throw taskError;
+
+    await supabase
+      .from('users')
+      .update({ ore: user.ore + (task.reward || 100) })
+      .eq('telegram_id', telegramId);
+
+    res.json({ success: true, message: `Task completed! +${task.reward || 100} ORE` });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 5️⃣ نظام الدعوات
-app.post('/api/referral/invite', async (req, res) => {
-  try {
-    const { referrerId, referredUserId } = req.body;
-    
-    const referrer = await User.findOne({ telegramId: referrerId });
-    const referred = await User.findOne({ telegramId: referredUserId });
-    
-    if (!referrer || !referred) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    const existing = await Referral.findOne({ referrerId, referredUserId });
-    if (existing) {
-      return res.json({ success: false, message: 'Already referred' });
-    }
-    
-    const referral = new Referral({ referrerId, referredUserId, referredUsername: referred.username });
-    await referral.save();
-    
-    referrer.ore += REFERRAL_REWARD_REFERRER;
-    referrer.referralCount += 1;
-    referred.ore += REFERRAL_REWARD_REFERRED;
-    referred.referredBy = referrerId;
-    
-    await referrer.save();
-    await referred.save();
-    
-    res.json({
-      success: true,
-      referrerReward: REFERRAL_REWARD_REFERRER,
-      referredReward: REFERRAL_REWARD_REFERRED
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 6️⃣ الحصول على رابط الدعوة
+// Get Referral Link
 app.get('/api/referral/link/:telegramId', async (req, res) => {
   try {
     const { telegramId } = req.params;
-    const user = await User.findOne({ telegramId });
-    
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    
-    const referralLink = `https://t.me/${process.env.BOT_USERNAME}?start=r_${telegramId}`;
-    
-    res.json({
-      link: referralLink,
-      referralCount: user.referralCount
-    });
+    const referralLink = `https://t.me/nabdbooks_bot?start=${telegramId}`;
+    res.json({ success: true, referralLink });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 7️⃣ الترقيات (شراء من المتجر)
+// Create Referral
+app.post('/api/referral/invite', async (req, res) => {
+  try {
+    const { referrerTelegramId, referredTelegramId } = req.body;
+
+    const { data: referrer } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', referrerTelegramId)
+      .single();
+
+    const { data: referred } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', referredTelegramId)
+      .single();
+
+    await supabase
+      .from('users')
+      .update({
+        ore: referrer.ore + REFERRAL_REWARD_REFERRER,
+        referral_count: referrer.referral_count + 1,
+      })
+      .eq('telegram_id', referrerTelegramId);
+
+    await supabase
+      .from('users')
+      .update({ ore: referred.ore + REFERRAL_REWARD_REFERRED })
+      .eq('telegram_id', referredTelegramId);
+
+    res.json({ success: true, message: 'Referral bonus awarded!' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Buy Upgrade
 app.post('/api/store/upgrade', async (req, res) => {
   try {
-    const { telegramId, upgradeType } = req.body;
-    const user = await User.findOne({ telegramId });
-    
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    
-    const upgradeCosts = {
-      goldenPickaxe: 10000,
-      energyBoost: 2500,
-      royalTitle: 50000
-    };
-    
-    const cost = upgradeCosts[upgradeType];
-    if (!cost) return res.status(400).json({ error: 'Invalid upgrade type' });
-    
+    const { telegramId, upgradeId } = req.body;
+
+    const { data: user } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegramId)
+      .single();
+
+    const upgradeCosts = { energy_boost: 100, ore_multiplier: 500 };
+    const cost = upgradeCosts[upgradeId] || 0;
+
     if (user.ore < cost) {
       return res.json({ success: false, message: 'Not enough ORE' });
     }
-    
-    user.ore -= cost;
-    user.upgrades[upgradeType] = true;
-    await user.save();
-    
-    res.json({
-      success: true,
-      message: `Upgrade ${upgradeType} purchased!`,
-      remainingOre: user.ore
-    });
+
+    await supabase
+      .from('users')
+      .update({ ore: user.ore - cost })
+      .eq('telegram_id', telegramId);
+
+    res.json({ success: true, message: `Upgrade purchased! -${cost} ORE` });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 8️⃣ طلب سحب
+// Request Withdrawal
 app.post('/api/withdrawal/request', async (req, res) => {
   try {
-    const { telegramId, amount, method } = req.body;
-    const user = await User.findOne({ telegramId });
-    
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    
-    if (user.level < WITHDRAWAL_THRESHOLD_LEVEL) {
-      return res.json({ success: false, message: `Need level ${WITHDRAWAL_THRESHOLD_LEVEL}` });
-    }
-    
-    if (user.referralCount < MIN_REFERRALS) {
-      return res.json({ success: false, message: `Need ${MIN_REFERRALS} referrals` });
-    }
-    
-    if (!user.identityVerified) {
-      return res.json({ success: false, message: 'Identity verification required' });
-    }
-    
+    const { telegramId, amount } = req.body;
+
+    const { data: user } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegramId)
+      .single();
+
     if (amount < MIN_WITHDRAWAL) {
       return res.json({ success: false, message: `Minimum withdrawal: $${MIN_WITHDRAWAL}` });
     }
-    
-    user.withdrawalRequests.push({
-      amount,
-      status: 'pending',
-      method
-    });
-    
-    await user.save();
-    
-    res.json({
-      success: true,
-      message: 'Withdrawal request submitted',
-      requestId: user.withdrawalRequests[user.withdrawalRequests.length - 1]._id
-    });
+
+    res.json({ success: true, message: 'Withdrawal request created!' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 9️⃣ الحصول على بيانات المستخدم (Dashboard)
+// Get Leaderboard
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('username, ore, level')
+      .order('ore', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+    res.json({ success: true, leaderboard: data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get User Stats
 app.get('/api/user/:telegramId', async (req, res) => {
   try {
     const { telegramId } = req.params;
-    const user = await User.findOne({ telegramId });
-    
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    
-    res.json({
-      telegramId: user.telegramId,
-      username: user.username,
-      ore: user.ore,
-      level: user.level,
-      energy: calculateEnergy(user),
-      energyMax: ENERGY_MAX,
-      referralCount: user.referralCount,
-      upgrades: user.upgrades,
-      withdrawalRequests: user.withdrawalRequests,
-      identityVerified: user.identityVerified,
-      totalWithdrawn: user.totalWithdrawn
-    });
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegramId)
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, user: data });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 🔟 Leaderboard
-app.get('/api/leaderboard', async (req, res) => {
-  try {
-    const topUsers = await User.find()
-      .sort({ referralCount: -1 })
-      .limit(10)
-      .select('username referralCount');
-    
-    res.json({ leaderboard: topUsers });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// صحة السيرفر
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-// تشغيل السيرفر
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Deep Vein Backend running on port ${PORT}`);
+  console.log(`🚀 Deep Vein Server running on port ${PORT}`);
+  console.log(`✅ Connected to Supabase`);
 });
