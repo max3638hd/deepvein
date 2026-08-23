@@ -34,9 +34,20 @@ app.post('/api/user/register', async (req, res) => {
   try {
     const { telegramId, username } = req.body;
 
+    // Don't overwrite existing progress on repeat opens — only insert if new
+    const { data: existing } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegramId)
+      .single();
+
+    if (existing) {
+      return res.json({ success: true, user: existing });
+    }
+
     const { data, error } = await supabase
       .from('users')
-      .upsert({
+      .insert({
         telegram_id: telegramId,
         username: username || `user_${telegramId}`,
         ore: 0,
@@ -78,6 +89,7 @@ app.post('/api/mining/tap', async (req, res) => {
       .update({
         ore: user.ore + ORE_PER_TAP,
         energy: Math.max(0, user.energy - 1),
+        total_earned: (user.total_earned || 0) + ORE_PER_TAP,
         last_tap: new Date(),
       })
       .eq('telegram_id', telegramId)
@@ -90,24 +102,62 @@ app.post('/api/mining/tap', async (req, res) => {
   }
 });
 
-// Get Tasks
+// Get Tasks (with completion status for this user)
 app.get('/api/tasks', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { telegramId } = req.query;
+
+    const { data: tasks, error } = await supabase
       .from('tasks')
       .select('*');
 
     if (error) throw error;
-    res.json({ success: true, tasks: data });
+
+    if (!telegramId) {
+      return res.json({ success: true, tasks });
+    }
+
+    const { data: completed, error: completedError } = await supabase
+      .from('completed_tasks')
+      .select('task_id')
+      .eq('telegram_id', telegramId);
+
+    if (completedError) throw completedError;
+
+    const completedIds = new Set((completed || []).map(c => c.task_id));
+    const tasksWithStatus = tasks.map(t => ({
+      ...t,
+      completed: completedIds.has(t.id),
+    }));
+
+    res.json({ success: true, tasks: tasksWithStatus });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Complete Task
+// Complete Task (prevents duplicate claims)
 app.post('/api/task/complete', async (req, res) => {
   try {
     const { telegramId, taskId } = req.body;
+
+    if (!telegramId || !taskId) {
+      return res.status(400).json({ success: false, message: 'Missing telegramId or taskId' });
+    }
+
+    // Check if already completed
+    const { data: alreadyDone, error: checkError } = await supabase
+      .from('completed_tasks')
+      .select('id')
+      .eq('telegram_id', telegramId)
+      .eq('task_id', taskId)
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+
+    if (alreadyDone) {
+      return res.json({ success: false, message: 'Task already completed' });
+    }
 
     const { data: user, error: userError } = await supabase
       .from('users')
@@ -125,12 +175,28 @@ app.post('/api/task/complete', async (req, res) => {
 
     if (taskError) throw taskError;
 
+    const reward = task.reward || 100;
+
+    // Insert completion record first — the unique constraint on
+    // (telegram_id, task_id) blocks a second reward if this races.
+    const { error: insertError } = await supabase
+      .from('completed_tasks')
+      .insert({ telegram_id: telegramId, task_id: taskId });
+
+    if (insertError) {
+      // Unique constraint violation = someone else already claimed it
+      return res.json({ success: false, message: 'Task already completed' });
+    }
+
     await supabase
       .from('users')
-      .update({ ore: user.ore + (task.reward || 100) })
+      .update({
+        ore: user.ore + reward,
+        total_earned: (user.total_earned || 0) + reward,
+      })
       .eq('telegram_id', telegramId);
 
-    res.json({ success: true, message: `Task completed! +${task.reward || 100} ORE` });
+    res.json({ success: true, message: `Task completed! +${reward} ORE` });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -147,10 +213,27 @@ app.get('/api/referral/link/:telegramId', async (req, res) => {
   }
 });
 
-// Create Referral
+// Create Referral (prevents a referral pair from being rewarded twice)
 app.post('/api/referral/invite', async (req, res) => {
   try {
     const { referrerTelegramId, referredTelegramId } = req.body;
+
+    if (referrerTelegramId === referredTelegramId) {
+      return res.json({ success: false, message: 'Cannot refer yourself' });
+    }
+
+    // Record the referral first — unique constraint on referred_telegram_id
+    // means each user can only ever be "referred" once, ever.
+    const { error: insertError } = await supabase
+      .from('referrals')
+      .insert({
+        referrer_telegram_id: referrerTelegramId,
+        referred_telegram_id: referredTelegramId,
+      });
+
+    if (insertError) {
+      return res.json({ success: false, message: 'Referral already recorded' });
+    }
 
     const { data: referrer } = await supabase
       .from('users')
