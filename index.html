@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Deep Vein Ultra Pro</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&family=Big+Shoulders+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep:#0A0C10; --surface:#1A1F27; --surface-2:#222834; --line:#2A313D;
+    --ore-gold:#E8A33D; --vein-teal:#37D6BE; --text-hi:#F3EFE6; --text-low:#5E6672;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color: transparent;}
+  body { font-family:'Rubik', sans-serif; background:var(--bg-deep); color:var(--text-hi); overflow:hidden; touch-action: manipulation; }
+  .frame { width:100%; max-width:430px; height:100vh; margin:auto; display:flex; flex-direction:column; position:relative; background: radial-gradient(ellipse 120% 60% at 50% -10%, rgba(232,163,61,0.12), transparent 60%), var(--bg-deep); }
+  
+  /* Top Bar */
+  .topbar { display:flex; align-items:center; justify-content:space-between; padding:15px 20px; z-index:10; }
+  .profile { display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:100px; padding:5px 12px; }
+  .avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, var(--ore-gold), var(--vein-teal)); color:#000; display:flex; align-items:center; justify-content:center; font-weight:800; font-family:'Big Shoulders Display'; }
+  .balance-pill { display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--ore-gold); border-radius:100px; padding:8px 18px; box-shadow: 0 0 15px rgba(232,163,61,0.2); }
+  .num { font-family:'Big Shoulders Display'; font-size:22px; font-weight:800; color:var(--ore-gold); }
+
+  /* Screens Management */
+  .screen { flex:1; overflow-y:auto; padding-bottom:100px; scrollbar-width:none; z-index:5; }
+  section { display: block; }
+  .hidden { display: none !important; }
+
+  /* Tab: Home */
+  .hero-title { font-family:'Big Shoulders Display'; font-size:42px; text-align:center; margin-top:20px; background: linear-gradient(180deg, #FFF, var(--ore-gold)); -webkit-background-clip: text; color:transparent; }
+  .tap-zone { height:280px; display:flex; align-items:center; justify-content:center; }
+  .tap-btn { width:200px; height:200px; border-radius:50%; border:none; background:radial-gradient(circle, #FFD98A, var(--ore-gold) 70%, #A5701F); box-shadow: 0 0 50px rgba(232,163,61,0.4); cursor:pointer; font-size:85px; transition: transform 0.1s; }
+  .tap-btn:active { transform: scale(0.92); }
+  .tap-btn:disabled { opacity:0.4; }
+  .energy-box { padding:0 25px; margin-top:10px; }
+  .energy-bar { height:12px; background:var(--surface-2); border-radius:10px; overflow:hidden; border:1px solid var(--line); margin-top:6px; }
+  .energy-fill { height:100%; width:100%; background:linear-gradient(90deg, var(--vein-teal), #1E5F55); transition: 0.3s; }
+
+  /* Tab Content Styles */
+  .section-title { padding:20px 20px 10px; font-family:'Big Shoulders Display'; font-size:26px; color:var(--ore-gold); text-transform:uppercase; }
+  .card { display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:16px; margin:0 20px 12px; }
+  .card-info { flex:1; }
+  .card-title { font-size:15px; font-weight:700; margin-bottom:4px; }
+  .card-sub { font-size:12px; color:var(--vein-teal); font-weight:600; }
+  .btn-go { background:var(--vein-teal); color:#000; border:none; padding:10px 20px; border-radius:12px; font-weight:800; font-size:12px; box-shadow: 0 4px 10px rgba(55, 214, 190, 0.2); }
+  .btn-go:disabled { background:#444; color:#999; }
+
+  /* Prices Tab */
+  .price-item { display:flex; justify-content:space-between; align-items:center; background:var(--surface); margin:0 20px 10px; padding:18px; border-radius:16px; border:1px solid var(--line); }
+  .coin { display:flex; align-items:center; gap:12px; }
+  .coin-icon { width:36px; height:32px; background:var(--surface-2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--ore-gold); border:1px solid var(--line); }
+
+  /* Bottom Navbar */
+  .navbar { position:absolute; bottom:0; width:100%; height:90px; display:flex; justify-content:space-around; align-items:center; background:rgba(18,22,28,0.96); backdrop-filter:blur(20px); border-top:1px solid var(--line); padding-bottom:15px; z-index:20; }
+  .nav-item { background:none; border:none; color:var(--text-low); font-size:11px; display:flex; flex-direction:column; align-items:center; gap:6px; font-weight:600; transition:0.2s; }
+  .nav-item.active { color:var(--ore-gold); transform: translateY(-3px); }
+  .nav-item svg { width:24px; height:24px; }
+
+  /* Floating Animation */
+  .pop { position:absolute; font-family:'Big Shoulders Display'; font-weight:800; font-size:32px; color:var(--vein-teal); animation: floatUp 0.8s forwards; pointer-events:none; z-index:30; }
+  @keyframes floatUp { 0%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-120px);} }
+
+  .toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%); background:var(--surface); border:1px solid var(--ore-gold); color:var(--text-hi); padding:10px 18px; border-radius:100px; font-size:12px; z-index:50; opacity:0; transition:0.3s; pointer-events:none; }
+  .toast.show { opacity:1; }
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <!-- Header -->
+  <div class="topbar">
+    <div class="profile">
+      <div class="avatar" id="uInit">U</div>
+      <div style="font-size:14px; font-weight:700" id="uName">لاعب</div>
+    </div>
+    <div class="balance-pill">
+      <span class="num" id="balanceMain">0</span>
+      <span style="font-size:10px; color:var(--text-low); font-weight:bold;">ORE</span>
+    </div>
+  </div>
+
+  <!-- Screens -->
+  <div class="screen" id="mainScroll">
+    
+    <!-- Tab 1: Mining -->
+    <section id="tab-home">
+      <h1 class="hero-title">DEEP VEIN</h1>
+      <div style="text-align:center; color:var(--vein-teal); font-size:13px; margin-bottom:10px;">المستوى: <span id="level">1</span></div>
+      
+      <div class="tap-zone" id="tapZone">
+        <button class="tap-btn" id="tapBtn">⛏️</button>
+      </div>
+
+      <div class="energy-box">
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px; color:var(--text-mid);">
+          <span>طاقة التعدين</span>
+          <b id="energyText">1000 / 1000</b>
+        </div>
+        <div class="energy-bar"><div class="energy-fill" id="energyFill"></div></div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:25px 20px;">
+        <div style="background:var(--surface); padding:18px; border-radius:18px; text-align:center; border:1px solid var(--line);">
+          <div style="font-size:11px; color:var(--text-low); margin-bottom:5px;">لكل ضغطة</div>
+          <div style="font-family:'Big Shoulders Display'; font-size:24px; font-weight:bold; color:var(--vein-teal);">+2 ORE</div>
+        </div>
+        <div style="background:var(--surface); padding:18px; border-radius:18px; text-align:center; border:1px solid var(--line);">
+          <div style="font-size:11px; color:var(--text-low); margin-bottom:5px;">إجمالي الأرباح</div>
+          <div style="font-family:'Big Shoulders Display'; font-size:24px; font-weight:bold; color:var(--ore-gold);" id="totalEarned">0 ORE</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: Tasks (loaded from backend) -->
+    <section id="tab-tasks" class="hidden">
+      <h2 class="section-title">المهام اليومية 📋</h2>
+      <div id="tasksList">
+        <div style="padding:20px; text-align:center; color:var(--text-low); font-size:13px;">جاري تحميل المهام...</div>
+      </div>
+    </section>
+
+    <!-- Tab 3: Redeem/Store -->
+    <section id="tab-redeem" class="hidden">
+      <h2 class="section-title">المتجر والجوائز 💎</h2>
+      <div class="card"><div class="avatar" style="background:var(--surface-2)">⚡</div><div class="card-info"><div class="card-title">شحن طاقة فوري</div><div class="card-sub">يملأ الخزان بالكامل</div></div><button class="btn-go" style="background:var(--ore-gold)" onclick="buyUpgrade('energy_boost', 100, this)">100 ORE</button></div>
+      <div class="card"><div class="avatar" style="background:var(--surface-2)">⛏️</div><div class="card-info"><div class="card-title">مضاعف الأرباح</div><div class="card-sub">×2 ربح من الضغط</div></div><button class="btn-go" style="background:var(--ore-gold)" onclick="buyUpgrade('ore_multiplier', 500, this)">500 ORE</button></div>
+    </section>
+
+    <!-- Tab 4: Friends -->
+    <section id="tab-ref" class="hidden">
+      <h2 class="section-title">دعوة الأصدقاء 👥</h2>
+      <div style="background:var(--surface); margin:0 20px 20px; padding:25px; border-radius:25px; text-align:center; border:1px dashed var(--ore-gold);">
+        <p style="font-size:14px; color:var(--text-hi); margin-bottom:15px;">اربح 500 ORE عن كل صديق!</p>
+        <div id="refLink" style="background:#000; padding:12px; border-radius:12px; font-size:12px; color:var(--vein-teal); margin-bottom:15px; word-break:break-all;">جاري التحميل...</div>
+        <button class="btn-go" style="width:100%; padding:14px" onclick="copyRef()">نسخ رابط الدعوة</button>
+      </div>
+      <h2 class="section-title">أفضل الداعين 🏆</h2>
+      <div id="leaderboardList">
+        <div style="padding:0 20px; text-align:center; color:var(--text-low); font-size:13px;">جاري التحميل...</div>
+      </div>
+    </section>
+
+    <!-- Tab 5: Wallet -->
+    <section id="tab-wallet" class="hidden">
+      <h2 class="section-title">سحب الأرباح 💰</h2>
+      <div style="background:linear-gradient(145deg, var(--surface), #12161C); margin:0 20px; padding:40px; border-radius:30px; border:1px solid var(--line); text-align:center; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+        <div style="font-size:15px; color:var(--text-mid);">الرصيد الحالي</div>
+        <div style="font-size:50px; font-family:'Big Shoulders Display'; color:var(--vein-teal); margin:15px 0;" id="walletBalance">0 ORE</div>
+        <div style="font-size:11px; color:var(--text-low); text-transform:uppercase; letter-spacing:1px;">الحد الأدنى للسحب: 20$</div>
+        <button class="btn-go" style="width:100%; padding:14px; margin-top:20px;" onclick="requestWithdrawal()">طلب سحب</button>
+      </div>
+      <div style="padding:30px 20px; font-size:13px; color:var(--text-mid); line-height:1.8; border-top:1px solid var(--line); margin-top:20px;">
+        <h3 style="color:var(--ore-gold); margin-bottom:10px;">متطلبات فتح السحب:</h3>
+        • الوصول للمستوى 5 في التعدين.<br>
+        • دعوة 10 أصدقاء نشطين على الأقل.<br>
+      </div>
+    </section>
+
+    <!-- Tab 6: Prices -->
+    <section id="tab-prices" class="hidden">
+      <h2 class="section-title">أسعار العملات 📈</h2>
+      <div class="price-item"><div class="coin"><div class="coin-icon">T</div><b>Tether (USDT)</b></div><b style="color:var(--vein-teal)">$1.00</b></div>
+      <div class="price-item"><div class="coin"><div class="coin-icon">T</div><b>Toncoin (TON)</b></div><b style="color:var(--vein-teal)">$5.42</b></div>
+      <div class="price-item"><div class="coin"><div class="coin-icon">B</div><b>Bitcoin (BTC)</b></div><b style="color:var(--vein-teal)">$64,310</b></div>
+      <div class="price-item"><div class="coin"><div class="coin-icon">E</div><b>Ethereum (ETH)</b></div><b style="color:var(--vein-teal)">$2,640</b></div>
+      <div class="price-item"><div class="coin"><div class="coin-icon">S</div><b>Solana (SOL)</b></div><b style="color:var(--vein-teal)">$145.20</b></div>
+    </section>
+
+  </div>
+
+  <!-- Footer Navigation -->
+  <nav class="navbar">
+    <button class="nav-item active" onclick="switchTab('home', this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 12h3v8h6v-6h2v6h6v-8h3L12 2z"/></svg>تعدين</button>
+    <button class="nav-item" onclick="switchTab('tasks', this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>مهام</button>
+    <button class="nav-item" onclick="switchTab('redeem', this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>استبدال</button>
+    <button class="nav-item" onclick="switchTab('ref', this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>دعوة</button>
+    <button class="nav-item" onclick="switchTab('wallet', this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h9zm-9-2h10V8H12v8z"/></svg>أرباح</button>
+    <button class="nav-item" onclick="switchTab('prices', this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z"/></svg>أسعار</button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ====== CONFIG ======
+  const API_URL = 'https://deepvein-production.up.railway.app';
+
+  // ====== STATE ======
+  let telegramId = null;
+  let balance = 0;
+  let energy = 1000;
+  let level = 1;
+  let tapVal = 2;
+  let tapLock = false;
+
+  const balEl = document.getElementById('balanceMain');
+  const enFill = document.getElementById('energyFill');
+  const enText = document.getElementById('energyText');
+  const levelEl = document.getElementById('level');
+  const walletBalEl = document.getElementById('walletBalance');
+  const totalEarnedEl = document.getElementById('totalEarned');
+
+  function updateUI() {
+    balEl.textContent = balance.toLocaleString();
+    enFill.style.width = (energy/10) + "%";
+    enText.textContent = energy + " / 1000";
+    levelEl.textContent = level;
+    walletBalEl.textContent = balance.toLocaleString() + " ORE";
+    totalEarnedEl.textContent = balance.toLocaleString() + " ORE";
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=> t.classList.remove('show'), 2200);
+  }
+
+  async function apiPost(path, body) {
+    const res = await fetch(API_URL + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    return res.json();
+  }
+
+  async function apiGet(path) {
+    const res = await fetch(API_URL + path);
+    return res.json();
+  }
+
+  // ====== REGISTER / LOAD USER ======
+  async function registerUser(id, username) {
+    try {
+      const result = await apiPost('/api/user/register', { telegramId: id, username });
+      if (result.success && result.user) {
+        balance = result.user.ore || 0;
+        energy = result.user.energy ?? 1000;
+        level = result.user.level || 1;
+        updateUI();
+      }
+    } catch (e) {
+      showToast('تعذر الاتصال بالسيرفر');
+      console.error(e);
+    }
+  }
+
+  // ====== TAP ======
+  document.getElementById('tapBtn').addEventListener('click', async (e) => {
+    if (energy <= 0 || tapLock || !telegramId) return;
+    tapLock = true;
+
+    // Optimistic UI update
+    balance += tapVal; energy -= 1; updateUI();
+
+    const pop = document.createElement('div');
+    pop.className = 'pop'; pop.textContent = '+' + tapVal;
+    pop.style.left = (e.pageX || (e.touches && e.touches[0].pageX) || 200) + 'px';
+    pop.style.top = (e.pageY || (e.touches && e.touches[0].pageY) || 400) + 'px';
+    document.body.appendChild(pop);
+    setTimeout(()=>pop.remove(), 800);
+
+    if (window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+      window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+    }
+
+    try {
+      const result = await apiPost('/api/mining/tap', { telegramId });
+      if (result.success && result.user) {
+        // Sync with server truth
+        balance = result.user.ore;
+        energy = result.user.energy;
+        updateUI();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    tapLock = false;
+  });
+
+  // ====== TASKS ======
+  async function loadTasks() {
+    const listEl = document.getElementById('tasksList');
+    try {
+      const result = await apiGet('/api/tasks');
+      if (result.success && result.tasks && result.tasks.length) {
+        listEl.innerHTML = result.tasks.map(t => `
+          <div class="card">
+            <div class="card-info">
+              <div class="card-title">${t.title || 'مهمة'}</div>
+              <div class="card-sub">+${t.reward || 100} ORE</div>
+            </div>
+            <button class="btn-go" onclick="completeTask('${t.id}', this)">إتمام</button>
+          </div>
+        `).join('');
+      } else {
+        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-low); font-size:13px;">لا توجد مهام حاليًا</div>';
+      }
+    } catch (e) {
+      listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-low); font-size:13px;">تعذر تحميل المهام</div>';
+    }
+  }
+
+  async function completeTask(taskId, btn) {
+    btn.disabled = true;
+    try {
+      const result = await apiPost('/api/task/complete', { telegramId, taskId });
+      if (result.success) {
+        btn.textContent = "تمت ✅";
+        showToast(result.message || 'تم إنجاز المهمة');
+        refreshUser();
+      } else {
+        btn.disabled = false;
+        showToast(result.message || 'حدث خطأ');
+      }
+    } catch (e) {
+      btn.disabled = false;
+      showToast('تعذر الاتصال بالسيرفر');
+    }
+  }
+
+  // ====== STORE ======
+  async function buyUpgrade(upgradeId, cost, btn) {
+    btn.disabled = true;
+    try {
+      const result = await apiPost('/api/store/upgrade', { telegramId, upgradeId });
+      showToast(result.message || (result.success ? 'تم الشراء' : 'حدث خطأ'));
+      if (result.success) refreshUser();
+    } catch (e) {
+      showToast('تعذر الاتصال بالسيرفر');
+    }
+    btn.disabled = false;
+  }
+
+  // ====== REFERRAL ======
+  async function loadReferral() {
+    if (!telegramId) return;
+    try {
+      const result = await apiGet('/api/referral/link/' + telegramId);
+      if (result.success) {
+        document.getElementById('refLink').textContent = result.referralLink;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function copyRef() {
+    navigator.clipboard.writeText(document.getElementById('refLink').textContent);
+    if (window.Telegram && window.Telegram.WebApp.showAlert) {
+      window.Telegram.WebApp.showAlert("تم نسخ الرابط بنجاح!");
+    } else {
+      showToast('تم نسخ الرابط');
+    }
+  }
+
+  async function loadLeaderboard() {
+    const listEl = document.getElementById('leaderboardList');
+    try {
+      const result = await apiGet('/api/leaderboard');
+      if (result.success && result.leaderboard && result.leaderboard.length) {
+        listEl.innerHTML = result.leaderboard.slice(0, 10).map((u, i) => `
+          <div class="card">
+            <div style="font-weight:bold; color:${i === 0 ? 'var(--ore-gold)' : 'var(--text-mid)'}; width:20px;">${i+1}</div>
+            <div class="card-info">
+              <div class="card-title">${u.username}</div>
+              <div class="card-sub">${(u.ore||0).toLocaleString()} ORE</div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        listEl.innerHTML = '<div style="padding:0 20px; text-align:center; color:var(--text-low); font-size:13px;">لا يوجد بيانات بعد</div>';
+      }
+    } catch (e) {
+      listEl.innerHTML = '<div style="padding:0 20px; text-align:center; color:var(--text-low); font-size:13px;">تعذر تحميل القائمة</div>';
+    }
+  }
+
+  // ====== WALLET ======
+  async function requestWithdrawal() {
+    try {
+      const result = await apiPost('/api/withdrawal/request', { telegramId, amount: balance });
+      showToast(result.message || 'تم إرسال الطلب');
+    } catch (e) {
+      showToast('تعذر الاتصال بالسيرفر');
+    }
+  }
+
+  // ====== REFRESH USER FROM SERVER ======
+  async function refreshUser() {
+    if (!telegramId) return;
+    try {
+      const result = await apiGet('/api/user/' + telegramId);
+      if (result.success && result.user) {
+        balance = result.user.ore;
+        energy = result.user.energy;
+        level = result.user.level;
+        updateUI();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // ====== TAB SWITCHING ======
+  function switchTab(id, btn) {
+    document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+    document.getElementById('tab-' + id).classList.remove('hidden');
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('mainScroll').scrollTop = 0;
+
+    if (id === 'tasks') loadTasks();
+    if (id === 'ref') { loadReferral(); loadLeaderboard(); }
+  }
+
+  // ====== TELEGRAM SETUP ======
+  const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+
+  if (tg) {
+    tg.expand();
+  }
+
+  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+    const u = tg.initDataUnsafe.user;
+    telegramId = u.id;
+    document.getElementById('uName').textContent = u.first_name;
+    document.getElementById('uInit').textContent = u.first_name.charAt(0).toUpperCase();
+    registerUser(telegramId, u.username || u.first_name);
+  } else {
+    // Fallback for testing outside Telegram (preview, browser, etc.)
+    showToast('افتح اللعبة من داخل تيليجرام لتشغيل كامل الميزات');
+  }
+
+  updateUI();
+</script>
+</body>
+</html>
