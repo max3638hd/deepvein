@@ -21,7 +21,7 @@ const ORE_PER_TAP = 2;
 const ENERGY_MAX = 1000;
 const REFERRAL_REWARD_REFERRER = 500;
 const REFERRAL_REWARD_REFERRED = 300;
-const MIN_WITHDRAWAL = 20;
+const MIN_WITHDRAWAL = 1000; // تم التعديل: الحد الأدنى أصبح 1000
 const WITHDRAWAL_THRESHOLD_LEVEL = 5;
 const MIN_REFERRALS = 10;
 
@@ -289,26 +289,76 @@ app.post('/api/store/upgrade', async (req, res) => {
   }
 });
 
-// Request Withdrawal
+// ============================================================
+// ✅ تم تعديل دالة السحب (إضافة رسوم 5% وتفعيل الحفظ في قاعدة البيانات)
+// ============================================================
 app.post('/api/withdrawal/request', async (req, res) => {
   try {
-    const { telegramId, amount } = req.body;
+    const { telegramId, amount, walletAddress } = req.body;
 
-    const { data: user } = await supabase
+    // 1. التحقق من وجود عنوان المحفظة
+    if (!walletAddress) {
+      return res.json({ success: false, message: 'يرجى إدخال عنوان محفظتك' });
+    }
+
+    // 2. جلب بيانات المستخدم
+    const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
       .eq('telegram_id', telegramId)
       .single();
 
-    if (amount < MIN_WITHDRAWAL) {
-      return res.json({ success: false, message: `Minimum withdrawal: $${MIN_WITHDRAWAL}` });
+    if (userError || !user) {
+      return res.json({ success: false, message: 'المستخدم غير موجود' });
     }
 
-    res.json({ success: true, message: 'Withdrawal request created!' });
+    // 3. الحد الأدنى للسحب (1000 ORE)
+    if (amount < MIN_WITHDRAWAL) {
+      return res.json({ success: false, message: `الحد الأدنى للسحب هو ${MIN_WITHDRAWAL} ORE` });
+    }
+
+    // 4. التأكد من أن الرصيد كافٍ
+    if (user.ore < amount) {
+      return res.json({ success: false, message: 'رصيدك غير كافي' });
+    }
+
+    // 5. حساب الرسوم (5%) والمبلغ الصافي
+    const fee = amount * 0.05;
+    const netAmount = amount - fee;
+
+    // 6. خصم المبلغ كامل من رصيد المستخدم، وتسجيل المبلغ الصافي في انتظار السحب
+    await supabase
+      .from('users')
+      .update({ 
+        ore: user.ore - amount,
+        pending_withdrawal: (user.pending_withdrawal || 0) + netAmount 
+      })
+      .eq('telegram_id', telegramId);
+
+    // 7. تسجيل طلب السحب في جدول withdrawals
+    await supabase
+      .from('withdrawals')
+      .insert({
+        telegram_id: telegramId,
+        amount: netAmount,
+        fee: fee,
+        wallet_address: walletAddress,
+        status: 'pending',
+        created_at: new Date()
+      });
+
+    // 8. الرد على المستخدم
+    res.json({ 
+      success: true, 
+      message: `✅ تم طلب السحب بنجاح!\nالمبلغ الصافي: ${netAmount} ORE\nالرسوم: ${fee} ORE (5%)` 
+    });
+
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Withdrawal error:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في الخادم' });
   }
 });
+// ============================================================
 
 // Get Leaderboard
 app.get('/api/leaderboard', async (req, res) => {
