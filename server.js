@@ -21,7 +21,7 @@ const ORE_PER_TAP = 2;
 const ENERGY_MAX = 1000;
 const REFERRAL_REWARD_REFERRER = 500;
 const REFERRAL_REWARD_REFERRED = 300;
-const MIN_WITHDRAWAL = 1000; // تم التعديل: الحد الأدنى أصبح 1000
+const MIN_WITHDRAWAL = 1000; 
 const WITHDRAWAL_THRESHOLD_LEVEL = 5;
 const MIN_REFERRALS = 10;
 
@@ -56,6 +56,8 @@ app.post('/api/user/register', async (req, res) => {
         referral_count: 0,
         total_earned: 0,
         last_tap: new Date(),
+        vip_level: 'none', // افتراضي
+        vip_expiry: null,  // افتراضي
       })
       .select();
 
@@ -66,7 +68,9 @@ app.post('/api/user/register', async (req, res) => {
   }
 });
 
-// Mining - Tap to earn ORE
+// ============================================================
+// ✅ تم تعديل دالة التعدين لدعم VIP (برونز 3، ذهبي 4)
+// ============================================================
 app.post('/api/mining/tap', async (req, res) => {
   try {
     const { telegramId } = req.body;
@@ -84,12 +88,28 @@ app.post('/api/mining/tap', async (req, res) => {
       return res.json({ success: false, message: 'Not enough energy' });
     }
 
+    // 1. التحقق من صلاحية VIP (إذا انتهت، نرجعها لـ none)
+    let vipLevel = user.vip_level || 'none';
+    if (vipLevel !== 'none' && user.vip_expiry && new Date(user.vip_expiry) < new Date()) {
+      await supabase
+        .from('users')
+        .update({ vip_level: 'none', vip_expiry: null })
+        .eq('telegram_id', telegramId);
+      vipLevel = 'none';
+    }
+
+    // 2. تحديد عدد ORE لكل ضغطة حسب الرتبة
+    let orePerTap = ORE_PER_TAP; // 2
+    if (vipLevel === 'bronze') orePerTap = 3;   // +50%
+    if (vipLevel === 'gold') orePerTap = 4;     // +100%
+
+    // 3. تحديث قاعدة البيانات
     const { data: updated, error: updateError } = await supabase
       .from('users')
       .update({
-        ore: user.ore + ORE_PER_TAP,
+        ore: user.ore + orePerTap,
         energy: Math.max(0, user.energy - 1),
-        total_earned: (user.total_earned || 0) + ORE_PER_TAP,
+        total_earned: (user.total_earned || 0) + orePerTap,
         last_tap: new Date(),
       })
       .eq('telegram_id', telegramId)
@@ -101,6 +121,7 @@ app.post('/api/mining/tap', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+// ============================================================
 
 // Get Tasks (with completion status for this user)
 app.get('/api/tasks', async (req, res) => {
@@ -290,18 +311,16 @@ app.post('/api/store/upgrade', async (req, res) => {
 });
 
 // ============================================================
-// ✅ تم تعديل دالة السحب (إضافة رسوم 5% وتفعيل الحفظ في قاعدة البيانات)
+// ✅ دالة السحب مع رسوم 5%
 // ============================================================
 app.post('/api/withdrawal/request', async (req, res) => {
   try {
     const { telegramId, amount, walletAddress } = req.body;
 
-    // 1. التحقق من وجود عنوان المحفظة
     if (!walletAddress) {
       return res.json({ success: false, message: 'يرجى إدخال عنوان محفظتك' });
     }
 
-    // 2. جلب بيانات المستخدم
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
@@ -312,21 +331,17 @@ app.post('/api/withdrawal/request', async (req, res) => {
       return res.json({ success: false, message: 'المستخدم غير موجود' });
     }
 
-    // 3. الحد الأدنى للسحب (1000 ORE)
     if (amount < MIN_WITHDRAWAL) {
       return res.json({ success: false, message: `الحد الأدنى للسحب هو ${MIN_WITHDRAWAL} ORE` });
     }
 
-    // 4. التأكد من أن الرصيد كافٍ
     if (user.ore < amount) {
       return res.json({ success: false, message: 'رصيدك غير كافي' });
     }
 
-    // 5. حساب الرسوم (5%) والمبلغ الصافي
     const fee = amount * 0.05;
     const netAmount = amount - fee;
 
-    // 6. خصم المبلغ كامل من رصيد المستخدم، وتسجيل المبلغ الصافي في انتظار السحب
     await supabase
       .from('users')
       .update({ 
@@ -335,7 +350,6 @@ app.post('/api/withdrawal/request', async (req, res) => {
       })
       .eq('telegram_id', telegramId);
 
-    // 7. تسجيل طلب السحب في جدول withdrawals
     await supabase
       .from('withdrawals')
       .insert({
@@ -347,7 +361,6 @@ app.post('/api/withdrawal/request', async (req, res) => {
         created_at: new Date()
       });
 
-    // 8. الرد على المستخدم
     res.json({ 
       success: true, 
       message: `✅ تم طلب السحب بنجاح!\nالمبلغ الصافي: ${netAmount} ORE\nالرسوم: ${fee} ORE (5%)` 
