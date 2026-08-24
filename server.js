@@ -1,4 +1,5 @@
 const express = require('express');
+const setupBot = require('./bot');
 const { createClient } = require('@supabase/supabase-js');
 const cors = require('cors');
 require('dotenv').config();
@@ -34,7 +35,6 @@ app.post('/api/user/register', async (req, res) => {
   try {
     const { telegramId, username } = req.body;
 
-    // Don't overwrite existing progress on repeat opens — only insert if new
     const { data: existing } = await supabase
       .from('users')
       .select('*')
@@ -145,7 +145,6 @@ app.post('/api/task/complete', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing telegramId or taskId' });
     }
 
-    // Check if already completed
     const { data: alreadyDone, error: checkError } = await supabase
       .from('completed_tasks')
       .select('id')
@@ -177,14 +176,11 @@ app.post('/api/task/complete', async (req, res) => {
 
     const reward = task.reward || 100;
 
-    // Insert completion record first — the unique constraint on
-    // (telegram_id, task_id) blocks a second reward if this races.
     const { error: insertError } = await supabase
       .from('completed_tasks')
       .insert({ telegram_id: telegramId, task_id: taskId });
 
     if (insertError) {
-      // Unique constraint violation = someone else already claimed it
       return res.json({ success: false, message: 'Task already completed' });
     }
 
@@ -222,8 +218,6 @@ app.post('/api/referral/invite', async (req, res) => {
       return res.json({ success: false, message: 'Cannot refer yourself' });
     }
 
-    // Record the referral first — unique constraint on referred_telegram_id
-    // means each user can only ever be "referred" once, ever.
     const { error: insertError } = await supabase
       .from('referrals')
       .insert({
@@ -353,4 +347,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Deep Vein Server running on port ${PORT}`);
   console.log(`✅ Connected to Supabase`);
+  setupBot(app);
 });
