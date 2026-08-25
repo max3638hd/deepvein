@@ -250,8 +250,8 @@
   const ORE_PER_AD = 500;
   const AD_REWARD_ORE = 200;
   
-  // 🔴 الرابط الجديد المحدث
-  const AD_LINK = 'https://www.profitableratecpmnetwork.com/q5ia84mp?key=88c4baf6d9c12c1deb50856c98493437';
+  // 🔴 استخدم الرابط القديم (الذي كان Active)
+  const AD_LINK = 'https://www.profitableratecpmnetwork.com/jbr5388yf?key=f4f34258063f559aed2bbc2d90c2a06d';
 
   // ====== STATE ======
   let telegramId = null;
@@ -360,7 +360,8 @@
       const closeHandler = async () => {
         if (closeBtn.disabled) return;
         closeBtn.disabled = true; closeBtn.textContent = '⏳ جاري الصرف...';
-        window.open(AD_LINK, '_blank');
+        // 🔴 فتح الرابط في المتصفح الخارجي
+        window.open(AD_LINK, '_system');
         await addAdReward();
         overlay.style.display = 'none'; clearInterval(interval); closeBtn.removeEventListener('click', closeHandler); isAdShowing = false; tapBtn.disabled = false; resolve();
       };
