@@ -268,9 +268,10 @@
 <script>
   // ====== CONFIG ======
   const API_URL = 'https://deepvein-production.up.railway.app';
-  const USD_RATE = 1000; // 1000 ORE = 1 دولار
-  const ORE_PER_AD = 500; // كل 500 ORE يظهر إعلان
-  const AD_REWARD_ORE = 200; // مكافأة مشاهدة الإعلان (0.20 دولار)
+  const USD_RATE = 1000;
+  const ORE_PER_AD = 500;
+  const AD_REWARD_ORE = 200;
+  const AD_LINK = 'https://www.profitableratecpmnetwork.com/jbr5388yf?key=f4f34258063f559aed2bbc2d90c2a06d'; // 🔴 رابط Adsterra
 
   // ====== STATE ======
   let telegramId = null;
@@ -333,7 +334,6 @@
     try {
       const result = await apiPost('/api/ad/reward', { telegramId });
       if (result.success) {
-        // تحديث الرصيد محلياً لتجنب إعادة تحميل كامل
         balance += AD_REWARD_ORE;
         updateUI();
         showToast('🎉 مكافأة الإعلان: +' + AD_REWARD_ORE + ' ORE');
@@ -385,14 +385,15 @@
       const closeHandler = async () => {
         if (closeBtn.disabled) return;
         
-        // منع الضغط المتكرر
         closeBtn.disabled = true;
         closeBtn.textContent = '⏳ جاري الصرف...';
+        
+        // 🔴 فتح رابط الإعلان في نافذة جديدة
+        window.open(AD_LINK, '_blank');
         
         // صرف المكافأة
         await addAdReward();
         
-        // إغلاق الإعلان
         overlay.style.display = 'none';
         clearInterval(interval);
         closeBtn.removeEventListener('click', closeHandler);
@@ -635,4 +636,4 @@
   updateUI();
 </script>
 </body>
-          </html>
+                                                                                                                                                                                                            </html>
