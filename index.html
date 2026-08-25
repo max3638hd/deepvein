@@ -249,7 +249,9 @@
   const USD_RATE = 1000;
   const ORE_PER_AD = 500;
   const AD_REWARD_ORE = 200;
-  const AD_LINK = 'https://www.profitableratecpmnetwork.com/jbr5388yf?key=f4f34258063f559aed2bbc2d90c2a06d';
+  
+  // 🔴 الرابط الجديد المحدث
+  const AD_LINK = 'https://www.profitableratecpmnetwork.com/q5ia84mp?key=88c4baf6d9c12c1deb50856c98493437';
 
   // ====== STATE ======
   let telegramId = null;
@@ -460,26 +462,15 @@
     btn.disabled = false;
   }
 
-  // ====== REFERRAL (FIXED) ======
+  // ====== REFERRAL ======
   async function loadReferral() {
     const linkElement = document.getElementById('refLink');
-    
-    if (!telegramId) {
-        linkElement.textContent = '⚠️ يرجى تسجيل الدخول أولاً';
-        return;
-    }
-    
+    if (!telegramId) { linkElement.textContent = '⚠️ يرجى تسجيل الدخول أولاً'; return; }
     try {
-        const result = await apiGet('/api/referral/link/' + telegramId);
-        if (result.success) {
-            linkElement.textContent = result.referralLink;
-        } else {
-            linkElement.textContent = '⚠️ تعذر إنشاء الرابط';
-        }
-    } catch (e) {
-        console.error(e);
-        linkElement.textContent = '⚠️ خطأ في الاتصال بالسيرفر';
-    }
+      const result = await apiGet('/api/referral/link/' + telegramId);
+      if (result.success) { linkElement.textContent = result.referralLink; }
+      else { linkElement.textContent = '⚠️ تعذر إنشاء الرابط'; }
+    } catch (e) { console.error(e); linkElement.textContent = '⚠️ خطأ في الاتصال بالسيرفر'; }
   }
 
   function copyRef() {
@@ -572,10 +563,7 @@
     document.getElementById('mainScroll').scrollTop = 0;
     
     if (id === 'tasks') loadTasks();
-    if (id === 'ref') { 
-      loadReferral(); 
-      loadLeaderboard(); 
-    }
+    if (id === 'ref') { loadReferral(); loadLeaderboard(); }
     if (id === 'wallet') { refreshUser(); }
   }
 
