@@ -72,7 +72,7 @@
   .ad-box { background: var(--surface); border: 2px solid var(--ore-gold); border-radius: 30px; padding: 30px 20px; max-width: 340px; width: 100%; text-align: center; box-shadow: 0 0 60px rgba(232,163,61,0.2); }
   .ad-box h2 { font-family: 'Big Shoulders Display'; color: var(--ore-gold); font-size: 28px; margin-bottom: 10px; }
   .ad-box p { color: var(--text-low); font-size: 14px; margin-bottom: 20px; }
-  .ad-placeholder { background: var(--bg-deep); border: 1px dashed var(--line); border-radius: 16px; padding: 30px 10px; margin-bottom: 20px; color: var(--text-hi); }
+  #tads-container { min-height: 150px; background: var(--bg-deep); border-radius: 16px; padding: 10px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; color: var(--text-low); font-size: 13px; }
   .ad-timer { color: var(--vein-teal); font-size: 20px; font-weight: bold; margin: 10px 0; }
   .btn-ad-close { background: var(--ore-gold); color: #000; border: none; padding: 14px 30px; border-radius: 60px; font-weight: 800; font-size: 16px; width: 100%; cursor: pointer; transition: 0.2s; }
   .btn-ad-close:disabled { background: #444; color: #777; }
@@ -131,7 +131,6 @@
     <!-- Store / Redeem -->
     <section id="tab-redeem" class="hidden">
       <h2 class="section-title">المتجر 💎</h2>
-      
       <div style="padding:0 20px 10px; color:var(--vein-teal); font-weight:bold;">🚀 مضاعف الأرباح</div>
       <div class="card">
         <div class="avatar" style="background:var(--vein-teal);">🔥</div>
@@ -141,9 +140,7 @@
         </div>
         <button class="btn-go" style="background:var(--ore-gold)" onclick="activateBoost()">200 ORE</button>
       </div>
-
       <div style="padding:20px 20px 10px; color:var(--ore-gold); font-weight:bold;">👑 عضويات VIP</div>
-      
       <div class="card">
         <div class="avatar" style="background:var(--ore-gold);">🥉</div>
         <div class="card-info">
@@ -152,7 +149,6 @@
         </div>
         <button class="btn-go" style="background:var(--ore-gold)" onclick="purchaseVIP('bronze')">5$</button>
       </div>
-
       <div class="card">
         <div class="avatar" style="background:var(--ore-gold);">🥇</div>
         <div class="card-info">
@@ -161,7 +157,6 @@
         </div>
         <button class="btn-go" style="background:var(--ore-gold)" onclick="purchaseVIP('gold')">10$</button>
       </div>
-
       <div style="padding:20px 20px 10px; color:var(--text-low); font-weight:bold;">⚡ ترقيات</div>
       <div class="card"><div class="avatar" style="background:var(--surface-2)">⚡</div><div class="card-info"><div class="card-title">شحن طاقة فوري</div><div class="card-sub">يملأ الخزان بالكامل</div></div><button class="btn-go" style="background:var(--ore-gold)" onclick="buyUpgrade('energy_boost', 100, this)">100 ORE</button></div>
     </section>
@@ -225,16 +220,12 @@
     <button class="nav-item" onclick="switchTab('prices', this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z"/></svg>أسعار</button>
   </nav>
 
-  <!-- AD OVERLAY -->
+  <!-- ======== AD OVERLAY ======== -->
   <div class="ad-overlay" id="adOverlay" style="display: none;">
     <div class="ad-box">
       <h2>📢 إعلان</h2>
       <p id="adReason">شاهد الإعلان لتكمل تعدينك وتحصل على مكافأة!</p>
-      <div class="ad-placeholder" id="adContent">
-        <div style="font-size: 40px; margin-bottom: 10px;">🎯</div>
-        <div style="font-size: 14px; color: var(--text-low);">هنا مساحة إعلانية</div>
-        <div style="font-size: 11px; color: var(--ore-gold);">💰 ستحصل على 200 ORE (0.20 دولار) بعد المشاهدة</div>
-      </div>
+      <div id="tads-container">⏳ جاري تحميل الإعلان...</div>
       <div class="ad-timer" id="adTimer">⏳ 5</div>
       <button class="btn-ad-close" id="adCloseBtn" disabled>انتظر لحظة...</button>
     </div>
@@ -249,9 +240,6 @@
   const USD_RATE = 1000;
   const ORE_PER_AD = 500;
   const AD_REWARD_ORE = 200;
-  
-  // 🔴 استخدم الرابط القديم (الذي كان Active)
-  const AD_LINK = 'https://www.profitableratecpmnetwork.com/jbr5388yf?key=f4f34258063f559aed2bbc2d90c2a06d';
 
   // ====== STATE ======
   let telegramId = null;
@@ -265,6 +253,8 @@
   let isFirstOpen = true;
   let boostExpiry = null;
   let vipLevel = 'none';
+  let tadsWidget = null;
+  let tadsLoaded = false;
 
   const balEl = document.getElementById('balanceMain');
   const enFill = document.getElementById('energyFill');
@@ -341,31 +331,94 @@
     } catch (e) { console.error(e); }
   }
 
-  // ====== AD SYSTEM ======
+  // ====== TADS SYSTEM ======
+  function loadTads() {
+    if (tadsLoaded) return;
+    tadsLoaded = true;
+    const script = document.createElement('script');
+    script.src = 'https://tads.me/static/tgb/widget.js';
+    script.async = true;
+    document.head.appendChild(script);
+  }
+
   function showAd(reason) {
     return new Promise((resolve) => {
       if (isAdShowing) { resolve(); return; }
-      isAdShowing = true; tapBtn.disabled = true;
+      isAdShowing = true;
+      tapBtn.disabled = true;
+
       const overlay = document.getElementById('adOverlay');
       const timerEl = document.getElementById('adTimer');
       const closeBtn = document.getElementById('adCloseBtn');
       const reasonEl = document.getElementById('adReason');
-      reasonEl.textContent = (reason === 'open') ? '👋 مرحباً! شاهد الإعلان لتحصل على مكافأة 200 ORE' : '🎁 مكافأة! أكمل مشاهدة الإعلان لتحصل على 200 ORE إضافية';
-      overlay.style.display = 'flex'; closeBtn.disabled = true; closeBtn.textContent = '⏳ انتظر لحظة...';
-      let countdown = 5; timerEl.textContent = '⏳ ' + countdown;
-      const interval = setInterval(() => {
-        countdown--; if (countdown > 0) { timerEl.textContent = '⏳ ' + countdown; } 
-        else { clearInterval(interval); timerEl.textContent = '💰 اضغط للمتابعة'; closeBtn.disabled = false; closeBtn.textContent = '🗑️ تخطي الإعلان (استلم المكافأة)'; }
-      }, 1000);
-      const closeHandler = async () => {
-        if (closeBtn.disabled) return;
-        closeBtn.disabled = true; closeBtn.textContent = '⏳ جاري الصرف...';
-        // 🔴 فتح الرابط في المتصفح الخارجي
-        window.open(AD_LINK, '_system');
-        await addAdReward();
-        overlay.style.display = 'none'; clearInterval(interval); closeBtn.removeEventListener('click', closeHandler); isAdShowing = false; tapBtn.disabled = false; resolve();
+      const container = document.getElementById('tads-container');
+
+      reasonEl.textContent = (reason === 'open') ? '👋 شاهد الإعلان لتحصل على مكافأة 200 ORE' : '🎁 مكافأة! أكمل مشاهدة الإعلان لتحصل على 200 ORE إضافية';
+      container.innerHTML = '⏳ جاري تحميل الإعلان...';
+      overlay.style.display = 'flex';
+      closeBtn.disabled = true;
+      closeBtn.textContent = '⏳ جاري التحميل...';
+
+      loadTads();
+
+      const initWidget = () => {
+        if (typeof TGB !== 'undefined') {
+          try {
+            tadsWidget = new TGB.Widget({
+              container: container,
+              widgetId: 11751,
+              onAdLoaded: function() {
+                closeBtn.textContent = '⏳ انتظر 5 ثواني...';
+                let countdown = 5;
+                timerEl.textContent = '⏳ ' + countdown;
+                const interval = setInterval(() => {
+                  countdown--;
+                  if (countdown > 0) {
+                    timerEl.textContent = '⏳ ' + countdown;
+                  } else {
+                    clearInterval(interval);
+                    timerEl.textContent = '💰 اضغط للمتابعة';
+                    closeBtn.disabled = false;
+                    closeBtn.textContent = '🗑️ تخطي الإعلان (استلم المكافأة)';
+                  }
+                }, 1000);
+              },
+              onAdReward: function() {
+                addAdReward();
+              },
+              onAdError: function(error) {
+                console.error('TADS error:', error);
+                overlay.style.display = 'none';
+                isAdShowing = false;
+                tapBtn.disabled = false;
+                resolve();
+              }
+            });
+            tadsWidget.load();
+          } catch(e) {
+            console.error('TADS init error:', e);
+            overlay.style.display = 'none';
+            isAdShowing = false;
+            tapBtn.disabled = false;
+            resolve();
+          }
+        } else {
+          setTimeout(initWidget, 500);
+        }
       };
-      closeBtn.addEventListener('click', closeHandler);
+
+      setTimeout(initWidget, 300);
+
+      closeBtn.onclick = function() {
+        if (closeBtn.disabled) return;
+        if (tadsWidget && typeof tadsWidget.close === 'function') {
+          tadsWidget.close();
+        }
+        overlay.style.display = 'none';
+        isAdShowing = false;
+        tapBtn.disabled = false;
+        resolve();
+      };
     });
   }
 
@@ -598,4 +651,4 @@
   updateUI();
 </script>
 </body>
-  </html>
+</html>
