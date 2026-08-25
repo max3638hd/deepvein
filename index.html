@@ -72,7 +72,8 @@
   .ad-box { background: var(--surface); border: 2px solid var(--ore-gold); border-radius: 30px; padding: 30px 20px; max-width: 340px; width: 100%; text-align: center; box-shadow: 0 0 60px rgba(232,163,61,0.2); }
   .ad-box h2 { font-family: 'Big Shoulders Display'; color: var(--ore-gold); font-size: 28px; margin-bottom: 10px; }
   .ad-box p { color: var(--text-low); font-size: 14px; margin-bottom: 20px; }
-  #tads-container { min-height: 150px; background: var(--bg-deep); border-radius: 16px; padding: 10px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; color: var(--text-low); font-size: 13px; }
+  #ad-content-container { min-height: 150px; background: var(--bg-deep); border-radius: 16px; padding: 20px 10px; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-low); font-size: 14px; border: 1px dashed var(--line); }
+  #ad-content-container .ad-icon { font-size: 40px; margin-bottom: 10px; }
   .ad-timer { color: var(--vein-teal); font-size: 20px; font-weight: bold; margin: 10px 0; }
   .btn-ad-close { background: var(--ore-gold); color: #000; border: none; padding: 14px 30px; border-radius: 60px; font-weight: 800; font-size: 16px; width: 100%; cursor: pointer; transition: 0.2s; }
   .btn-ad-close:disabled { background: #444; color: #777; }
@@ -225,7 +226,11 @@
     <div class="ad-box">
       <h2>📢 إعلان</h2>
       <p id="adReason">شاهد الإعلان لتكمل تعدينك وتحصل على مكافأة!</p>
-      <div id="tads-container">⏳ جاري تحميل الإعلان...</div>
+      <div id="ad-content-container">
+        <div class="ad-icon">🎯</div>
+        <div style="font-size: 14px; color: var(--text-low);">جاري تحميل الإعلان...</div>
+        <div style="font-size: 11px; color: var(--ore-gold); margin-top: 5px;">💰 ستحصل على 200 ORE بعد المشاهدة</div>
+      </div>
       <div class="ad-timer" id="adTimer">⏳ 5</div>
       <button class="btn-ad-close" id="adCloseBtn" disabled>انتظر لحظة...</button>
     </div>
@@ -240,13 +245,13 @@
   const USD_RATE = 1000;
   const ORE_PER_AD = 500;
   const AD_REWARD_ORE = 200;
-  const ENERGY_MAX = 5000; // ✅ تم زيادة الطاقة إلى 5000
+  const ENERGY_MAX = 5000;
 
   // ====== STATE ======
   let telegramId = null;
   let userData = null;
   let balance = 0, energy = ENERGY_MAX, level = 1;
-  let tapVal = 5; // ✅ أصبح 5 بدل 2
+  let tapVal = 5;
   let tapLock = false;
   let walletAddress = null;
   let oreSinceLastAd = 0;
@@ -254,9 +259,9 @@
   let isFirstOpen = true;
   let boostExpiry = null;
   let vipLevel = 'none';
-  let tadsWidget = null;
-  let tadsLoaded = false;
+  let adLoaded = false;
 
+  // ====== DOM REFS ======
   const balEl = document.getElementById('balanceMain');
   const enFill = document.getElementById('energyFill');
   const enText = document.getElementById('energyText');
@@ -269,6 +274,11 @@
   const tapRateDisplay = document.getElementById('tapRateDisplay');
   const boostIndicator = document.getElementById('boostIndicator');
   const vipBadge = document.getElementById('vipBadge');
+  const overlay = document.getElementById('adOverlay');
+  const timerEl = document.getElementById('adTimer');
+  const closeBtn = document.getElementById('adCloseBtn');
+  const reasonEl = document.getElementById('adReason');
+  const adContainer = document.getElementById('ad-content-container');
 
   function updateUI() {
     balEl.textContent = balance.toLocaleString();
@@ -281,9 +291,9 @@
     walletUSDEl.textContent = '$' + usd;
     totalUSDEl.textContent = '$' + usd;
 
-    let rate = 5; // ✅ أصبح 5 بدل 2
-    if (vipLevel === 'bronze') rate = Math.floor(5 * 1.5); // 7
-    if (vipLevel === 'gold') rate = 5 * 2; // 10
+    let rate = 5;
+    if (vipLevel === 'bronze') rate = Math.floor(5 * 1.5);
+    if (vipLevel === 'gold') rate = 5 * 2;
     const isBoost = boostExpiry && new Date(boostExpiry) > new Date();
     if (isBoost) rate = rate * 2;
     tapVal = rate;
@@ -293,7 +303,7 @@
     if (vipLevel !== 'none') { vipBadge.style.display = 'inline'; vipBadge.textContent = 'VIP ' + vipLevel.toUpperCase(); } else { vipBadge.style.display = 'none'; }
   }
 
-  // ====== تجديد الطاقة تلقائياً كل 5 ثواني ======
+  // Energy Regeneration
   setInterval(() => {
     if (energy < ENERGY_MAX && !isAdShowing) {
       energy = Math.min(energy + 5, ENERGY_MAX);
@@ -341,109 +351,118 @@
     } catch (e) { console.error(e); }
   }
 
-  // ====== TADS SYSTEM ======
-  function loadTads() {
-    if (tadsLoaded) return;
-    tadsLoaded = true;
+  // ====== LOAD RICHADS SCRIPT ======
+  function loadRichAds() {
+    if (window._richads_loaded) return;
+    window._richads_loaded = true;
     const script = document.createElement('script');
-    script.src = 'https://tads.me/static/tgb/widget.js';
+    script.src = 'https://richinfo.co/richpartners/telegram/js/tg-ob.js';
     script.async = true;
     document.head.appendChild(script);
+    script.onload = function() {
+      console.log('RichAds script loaded successfully.');
+    };
+    script.onerror = function() {
+      console.error('Failed to load RichAds script.');
+    };
   }
 
+  // ====== SHOW AD ======
   function showAd(reason) {
     return new Promise((resolve) => {
       if (isAdShowing) { resolve(); return; }
       isAdShowing = true;
       tapBtn.disabled = true;
+      adLoaded = false;
 
-      const overlay = document.getElementById('adOverlay');
-      const timerEl = document.getElementById('adTimer');
-      const closeBtn = document.getElementById('adCloseBtn');
-      const reasonEl = document.getElementById('adReason');
-      const container = document.getElementById('tads-container');
-
+      // Reset overlay
       reasonEl.textContent = (reason === 'open') ? '👋 شاهد الإعلان لتحصل على مكافأة 200 ORE' : '🎁 مكافأة! أكمل مشاهدة الإعلان لتحصل على 200 ORE إضافية';
-      container.innerHTML = '⏳ جاري تحميل الإعلان...';
+      adContainer.innerHTML = `
+        <div class="ad-icon">🎯</div>
+        <div style="font-size: 14px; color: var(--text-low);">جاري تحميل الإعلان...</div>
+        <div style="font-size: 11px; color: var(--ore-gold); margin-top: 5px;">💰 ستحصل على 200 ORE بعد المشاهدة</div>
+      `;
       overlay.style.display = 'flex';
       closeBtn.disabled = true;
       closeBtn.textContent = '⏳ جاري التحميل...';
+      timerEl.textContent = '⏳ 5';
 
-      loadTads();
+      // Load script
+      loadRichAds();
 
-      let adLoaded = false;
-
-      const initWidget = () => {
-        if (typeof TGB !== 'undefined') {
-          try {
-            tadsWidget = new TGB.Widget({
-              container: container,
-              widgetId: 11751,
-              onAdLoaded: function() {
-                adLoaded = true;
-                closeBtn.textContent = '⏳ انتظر 5 ثواني...';
-                let countdown = 5;
-                timerEl.textContent = '⏳ ' + countdown;
-                const interval = setInterval(() => {
-                  countdown--;
-                  if (countdown > 0) {
-                    timerEl.textContent = '⏳ ' + countdown;
-                  } else {
-                    clearInterval(interval);
-                    timerEl.textContent = '💰 اضغط للمتابعة';
-                    closeBtn.disabled = false;
-                    closeBtn.textContent = '🗑️ تخطي الإعلان (استلم المكافأة)';
-                  }
-                }, 1000);
-              },
-              onAdReward: function() {
-                addAdReward();
-              },
-              onAdError: function(error) {
-                console.error('TADS error:', error);
-                adLoaded = true; // منع timeout من الإغلاق
-                overlay.style.display = 'none';
-                isAdShowing = false;
-                tapBtn.disabled = false;
-                resolve();
-              }
-            });
-            tadsWidget.load();
-          } catch(e) {
-            console.error('TADS init error:', e);
-            overlay.style.display = 'none';
-            isAdShowing = false;
-            tapBtn.disabled = false;
-            resolve();
-          }
+      // Attempt to show ad after script loads
+      let adShown = false;
+      const tryShowAd = () => {
+        if (adShown) return;
+        // Check if RichAds object is available (assuming it creates a global object like `RichAds` or `TelegramAds`)
+        // The script tg-ob.js likely creates a global object. We'll try common names.
+        const adApi = window.RichAds || window.TelegramAds || window.RichOfferwall;
+        if (adApi && typeof adApi.showRewardedAd === 'function') {
+          adShown = true;
+          adLoaded = true;
+          adApi.showRewardedAd({
+            onReward: function() {
+              addAdReward();
+              closeAd();
+            },
+            onClose: function() {
+              closeAd();
+            },
+            onError: function(err) {
+              console.error('RichAds error:', err);
+              showToast('⚠️ تعذر تحميل الإعلان، تابع التعدين');
+              closeAd();
+            }
+          });
         } else {
-          setTimeout(initWidget, 500);
+          // If API not found, wait a bit and retry
+          if (!window._richads_retried) {
+            window._richads_retried = true;
+            setTimeout(tryShowAd, 2000);
+          } else {
+            // Fallback: show manual close after 5 seconds
+            if (!adLoaded) {
+              adLoaded = true;
+              let countdown = 5;
+              timerEl.textContent = '⏳ ' + countdown;
+              const interval = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                  timerEl.textContent = '⏳ ' + countdown;
+                } else {
+                  clearInterval(interval);
+                  timerEl.textContent = '💰 اضغط للمتابعة';
+                  closeBtn.disabled = false;
+                  closeBtn.textContent = '🗑️ تخطي الإعلان (استلم المكافأة)';
+                  closeBtn.onclick = function() {
+                    addAdReward(); // Give reward anyway for fallback to keep user happy
+                    closeAd();
+                  };
+                }
+              }, 1000);
+            }
+          }
         }
       };
 
-      setTimeout(initWidget, 300);
+      // Start trying
+      setTimeout(tryShowAd, 500);
 
-      // ✅ مؤقت 15 ثانية لإلغاء التجميد
+      // Safety timeout: auto-close after 15 seconds if nothing happens
       setTimeout(() => {
-        if (!adLoaded && isAdShowing) {
-          overlay.style.display = 'none';
-          isAdShowing = false;
-          tapBtn.disabled = false;
-          resolve();
-          showToast('⚠️ انتهت مهلة الإعلان، حاول مرة أخرى');
+        if (isAdShowing) {
+          showToast('⏱️ انتهت مهلة الإعلان، تابع التعدين');
+          closeAd();
         }
       }, 15000);
 
-      closeBtn.onclick = function() {
-        if (closeBtn.disabled) return;
-        if (tadsWidget && typeof tadsWidget.close === 'function') {
-          tadsWidget.close();
-        }
+      function closeAd() {
+        if (!isAdShowing) return;
         overlay.style.display = 'none';
         isAdShowing = false;
         tapBtn.disabled = false;
         resolve();
-      };
+      }
     });
   }
 
@@ -490,16 +509,158 @@
   });
 
   // ====== TASKS ======
-  async function loadTasks() { /* ... (نفس الكود السابق) ... */ }
-  async function completeTask(taskId, btn) { /* ... */ }
-  async function buyUpgrade(upgradeId, cost, btn) { /* ... */ }
-  async function loadReferral() { /* ... */ }
-  function copyRef() { /* ... */ }
-  async function loadLeaderboard() { /* ... */ }
-  function saveWalletAddress() { /* ... */ }
-  async function requestWithdrawal() { /* ... */ }
-  async function refreshUser() { /* ... */ }
-  function switchTab(id, btn) { /* ... */ }
+  async function loadTasks() {
+    const listEl = document.getElementById('tasksList');
+    try {
+      const result = await apiGet('/api/tasks');
+      if (result.success && result.tasks && result.tasks.length) {
+        listEl.innerHTML = result.tasks.map(t => `
+          <div class="card">
+            <div class="card-info">
+              <div class="card-title">${t.title || 'مهمة'}</div>
+              <div class="card-sub">+${t.reward || 100} ORE</div>
+            </div>
+            <button class="btn-go" onclick="completeTask('${t.id}', this)">إتمام</button>
+          </div>
+        `).join('');
+      } else {
+        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-low); font-size:13px;">لا توجد مهام حاليًا</div>';
+      }
+    } catch (e) {
+      listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-low); font-size:13px;">تعذر تحميل المهام</div>';
+    }
+  }
+
+  async function completeTask(taskId, btn) {
+    btn.disabled = true;
+    try {
+      const result = await apiPost('/api/task/complete', { telegramId, taskId });
+      if (result.success) {
+        btn.textContent = "تمت ✅";
+        showToast(result.message || 'تم إنجاز المهمة');
+        refreshUser();
+      } else {
+        btn.disabled = false;
+        showToast(result.message || 'حدث خطأ');
+      }
+    } catch (e) {
+      btn.disabled = false;
+      showToast('تعذر الاتصال بالسيرفر');
+    }
+  }
+
+  async function buyUpgrade(upgradeId, cost, btn) {
+    btn.disabled = true;
+    try {
+      const result = await apiPost('/api/store/upgrade', { telegramId, upgradeId });
+      showToast(result.message || (result.success ? 'تم الشراء' : 'حدث خطأ'));
+      if (result.success) refreshUser();
+    } catch (e) {
+      showToast('تعذر الاتصال بالسيرفر');
+    }
+    btn.disabled = false;
+  }
+
+  async function loadReferral() {
+    const linkElement = document.getElementById('refLink');
+    if (!telegramId) { linkElement.textContent = '⚠️ يرجى تسجيل الدخول أولاً'; return; }
+    try {
+      const result = await apiGet('/api/referral/link/' + telegramId);
+      if (result.success) { linkElement.textContent = result.referralLink; }
+      else { linkElement.textContent = '⚠️ تعذر إنشاء الرابط'; }
+    } catch (e) { console.error(e); linkElement.textContent = '⚠️ خطأ في الاتصال بالسيرفر'; }
+  }
+
+  function copyRef() {
+    const link = document.getElementById('refLink').textContent;
+    if (!link || link.includes('⚠️')) { showToast('الرابط غير متوفر'); return; }
+    navigator.clipboard.writeText(link);
+    if (window.Telegram && window.Telegram.WebApp.showAlert) {
+      window.Telegram.WebApp.showAlert("تم نسخ الرابط بنجاح!");
+    } else {
+      showToast('تم نسخ الرابط');
+    }
+  }
+
+  async function loadLeaderboard() {
+    const listEl = document.getElementById('leaderboardList');
+    try {
+      const result = await apiGet('/api/leaderboard');
+      if (result.success && result.leaderboard && result.leaderboard.length) {
+        listEl.innerHTML = result.leaderboard.slice(0, 10).map((u, i) => `
+          <div class="card">
+            <div style="font-weight:bold; color:${i === 0 ? 'var(--ore-gold)' : 'var(--text-mid)'}; width:20px;">${i+1}</div>
+            <div class="card-info">
+              <div class="card-title">${u.username}</div>
+              <div class="card-sub">${(u.ore||0).toLocaleString()} ORE</div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        listEl.innerHTML = '<div style="padding:0 20px; text-align:center; color:var(--text-low); font-size:13px;">لا يوجد بيانات بعد</div>';
+      }
+    } catch (e) {
+      listEl.innerHTML = '<div style="padding:0 20px; text-align:center; color:var(--text-low); font-size:13px;">تعذر تحميل القائمة</div>';
+    }
+  }
+
+  function saveWalletAddress() {
+    const addr = document.getElementById('walletAddressInput').value.trim();
+    if (!addr) { showToast('يرجى إدخال عنوان محفظة صحيح'); return; }
+    walletAddress = addr;
+    showToast('✅ تم حفظ عنوان المحفظة بنجاح!');
+  }
+
+  async function requestWithdrawal() {
+    if (!telegramId) { showToast('يرجى تسجيل الدخول أولاً'); return; }
+    const amount = parseFloat(document.getElementById('withdrawAmount').value);
+    const addr = document.getElementById('walletAddressInput').value.trim();
+    if (!addr) { showToast('يرجى إدخال عنوان محفظتك أولاً'); return; }
+    if (isNaN(amount) || amount < 1000) { showToast('الحد الأدنى للسحب هو 1000 ORE'); return; }
+    if (amount > balance) { showToast('الرصيد غير كافي'); return; }
+
+    try {
+      const result = await apiPost('/api/withdrawal/request', { telegramId, amount, walletAddress: addr });
+      if (result.success) {
+        showToast(result.message || '✅ تم تقديم طلب السحب بنجاح');
+        refreshUser();
+        document.getElementById('withdrawAmount').value = '';
+      } else {
+        showToast(result.message || 'حدث خطأ في الطلب');
+      }
+    } catch (e) {
+      showToast('تعذر الاتصال بالسيرفر');
+      console.error(e);
+    }
+  }
+
+  async function refreshUser() {
+    if (!telegramId) return;
+    try {
+      const result = await apiGet('/api/user/' + telegramId);
+      if (result.success && result.user) {
+        userData = result.user;
+        balance = userData.ore; energy = userData.energy; level = userData.level;
+        vipLevel = userData.vip_level || 'none';
+        boostExpiry = userData.boost_expiry || null;
+        walletAddress = userData.wallet_address || null;
+        if (walletAddress) document.getElementById('walletAddressInput').value = walletAddress;
+        updateUI();
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  function switchTab(id, btn) {
+    document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+    document.getElementById('tab-' + id).classList.remove('hidden');
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('mainScroll').scrollTop = 0;
+    
+    if (id === 'tasks') loadTasks();
+    if (id === 'ref') { loadReferral(); loadLeaderboard(); }
+    if (id === 'wallet') { refreshUser(); }
+  }
 
   // ====== TELEGRAM SETUP ======
   const tg = (window.Telegram?.WebApp) ? window.Telegram.WebApp : null;
@@ -514,7 +675,6 @@
     showToast('افتح اللعبة من داخل تيليجرام لتشغيل كامل الميزات');
   }
   
-  // Expose functions globally
   window.loadTasks = loadTasks;
   window.completeTask = completeTask;
   window.buyUpgrade = buyUpgrade;
@@ -531,4 +691,4 @@
   updateUI();
 </script>
 </body>
-          </html>
+  </html>
