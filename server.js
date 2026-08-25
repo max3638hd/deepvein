@@ -56,8 +56,8 @@ app.post('/api/user/register', async (req, res) => {
         referral_count: 0,
         total_earned: 0,
         last_tap: new Date(),
-        vip_level: 'none', // افتراضي
-        vip_expiry: null,  // افتراضي
+        vip_level: 'none',
+        vip_expiry: null,
       })
       .select();
 
@@ -88,7 +88,6 @@ app.post('/api/mining/tap', async (req, res) => {
       return res.json({ success: false, message: 'Not enough energy' });
     }
 
-    // 1. التحقق من صلاحية VIP (إذا انتهت، نرجعها لـ none)
     let vipLevel = user.vip_level || 'none';
     if (vipLevel !== 'none' && user.vip_expiry && new Date(user.vip_expiry) < new Date()) {
       await supabase
@@ -98,12 +97,10 @@ app.post('/api/mining/tap', async (req, res) => {
       vipLevel = 'none';
     }
 
-    // 2. تحديد عدد ORE لكل ضغطة حسب الرتبة
-    let orePerTap = ORE_PER_TAP; // 2
-    if (vipLevel === 'bronze') orePerTap = 3;   // +50%
-    if (vipLevel === 'gold') orePerTap = 4;     // +100%
+    let orePerTap = ORE_PER_TAP;
+    if (vipLevel === 'bronze') orePerTap = 3;
+    if (vipLevel === 'gold') orePerTap = 4;
 
-    // 3. تحديث قاعدة البيانات
     const { data: updated, error: updateError } = await supabase
       .from('users')
       .update({
@@ -369,6 +366,39 @@ app.post('/api/withdrawal/request', async (req, res) => {
   } catch (error) {
     console.error('Withdrawal error:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في الخادم' });
+  }
+});
+// ============================================================
+
+// ============================================================
+// ✅ مكافأة مشاهدة الإعلان (يضيف 200 ORE للمستخدم)
+// ============================================================
+app.post('/api/ad/reward', async (req, res) => {
+  try {
+    const { telegramId } = req.body;
+    const AD_REWARD_ORE = 200; // ← غير هذا الرقم حسب رغبتك
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegramId)
+      .single();
+
+    if (userError || !user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    await supabase
+      .from('users')
+      .update({
+        ore: user.ore + AD_REWARD_ORE,
+        total_earned: (user.total_earned || 0) + AD_REWARD_ORE,
+      })
+      .eq('telegram_id', telegramId);
+
+    res.json({ success: true, message: `+${AD_REWARD_ORE} ORE من الإعلان` });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 // ============================================================
