@@ -16,9 +16,14 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Constants
-const ORE_PER_TAP = 2;
-const ENERGY_MAX = 1000;
+// ============================================================
+// 🔥 تم زيادة سرعة التعدين والطاقة
+// ============================================================
+const ORE_PER_TAP = 5;        // 5 ORE لكل ضغطة (كانت 2)
+const ENERGY_MAX = 5000;      // طاقة قصوى 5000 (كانت 1000)
+const ENERGY_REGEN_RATE = 5;  // تجديد 5 طاقة كل 5 ثواني (يتم في الواجهة)
+// ============================================================
+
 const REFERRAL_REWARD_REFERRER = 500;
 const REFERRAL_REWARD_REFERRED = 300;
 const MIN_WITHDRAWAL = 1000; 
@@ -27,7 +32,6 @@ const MIN_REFERRALS = 10;
 
 // VIP Prices (USD)
 const VIP_PRICES = { bronze: 5, gold: 10 };
-// Boost cost in ORE
 const BOOST_COST = 200;
 const BOOST_DURATION_MS = 3600000; // 1 hour
 
@@ -75,7 +79,7 @@ app.post('/api/user/register', async (req, res) => {
 });
 
 // ============================================================
-// ✅ Mining with VIP & BOOST support
+// ✅ Mining with VIP & BOOST support (سرعة أسرع)
 // ============================================================
 app.post('/api/mining/tap', async (req, res) => {
   try {
@@ -105,11 +109,11 @@ app.post('/api/mining/tap', async (req, res) => {
       await supabase.from('users').update({ boost_expiry: null }).eq('telegram_id', telegramId);
     }
 
-    // 3. Calculate ORE per tap
-    let orePerTap = ORE_PER_TAP; // 2
-    if (vipLevel === 'bronze') orePerTap = 3;
-    if (vipLevel === 'gold') orePerTap = 4;
-    if (isBoostActive) orePerTap = orePerTap * 2; // Double the reward
+    // 3. Calculate ORE per tap (مضاعفة VIP + Boost)
+    let orePerTap = ORE_PER_TAP; // 5
+    if (vipLevel === 'bronze') orePerTap = Math.floor(ORE_PER_TAP * 1.5); // 7
+    if (vipLevel === 'gold') orePerTap = ORE_PER_TAP * 2; // 10
+    if (isBoostActive) orePerTap = orePerTap * 2; // مضاعف الضعف
 
     // 4. Update database
     const { data: updated, error: updateError } = await supabase
@@ -168,7 +172,7 @@ app.post('/api/boost/activate', async (req, res) => {
 // ============================================================
 
 // ============================================================
-// ✅ VIP Purchase (Manual confirmation simulation)
+// ✅ VIP Purchase
 // ============================================================
 app.post('/api/vip/purchase', async (req, res) => {
   try {
@@ -196,7 +200,7 @@ app.post('/api/vip/purchase', async (req, res) => {
 });
 
 // ============================================================
-// ✅ Admin: Confirm VIP (Secret endpoint for you to test)
+// ✅ Admin: Confirm VIP
 // ============================================================
 app.post('/api/vip/confirm', async (req, res) => {
   try {
@@ -276,7 +280,7 @@ app.post('/api/task/complete', async (req, res) => {
 });
 
 // ============================================================
-// ✅ Referral Link (تم تصحيح الرابط)
+// ✅ Referral Link
 // ============================================================
 app.get('/api/referral/link/:telegramId', async (req, res) => {
   try {
