@@ -52,6 +52,12 @@
   .coin { display:flex; align-items:center; gap:12px; }
   .coin-icon { width:36px; height:32px; background:var(--surface-2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--ore-gold); border:1px solid var(--line); }
 
+  /* Withdrawal Form */
+  .withdraw-form { background:var(--surface); margin:0 20px 20px; padding:20px; border-radius:20px; border:1px solid var(--line); }
+  .withdraw-form label { display:block; font-size:12px; color:var(--text-low); margin-bottom:5px; margin-top:12px; }
+  .withdraw-form input { width:100%; padding:12px; border-radius:12px; background:var(--bg-deep); border:1px solid var(--line); color:var(--text-hi); font-size:16px; text-align:center; }
+  .withdraw-form input:focus { border-color:var(--ore-gold); outline:none; }
+
   /* Bottom Navbar */
   .navbar { position:absolute; bottom:0; width:100%; height:90px; display:flex; justify-content:space-around; align-items:center; background:rgba(18,22,28,0.96); backdrop-filter:blur(20px); border-top:1px solid var(--line); padding-bottom:15px; z-index:20; }
   .nav-item { background:none; border:none; color:var(--text-low); font-size:11px; display:flex; flex-direction:column; align-items:center; gap:6px; font-weight:600; transition:0.2s; }
@@ -64,6 +70,9 @@
 
   .toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%); background:var(--surface); border:1px solid var(--ore-gold); color:var(--text-hi); padding:10px 18px; border-radius:100px; font-size:12px; z-index:50; opacity:0; transition:0.3s; pointer-events:none; }
   .toast.show { opacity:1; }
+  
+  /* USD display */
+  .usd-amount { font-size:14px; color:var(--vein-teal); font-weight:600; }
 </style>
 </head>
 <body>
@@ -109,11 +118,12 @@
         <div style="background:var(--surface); padding:18px; border-radius:18px; text-align:center; border:1px solid var(--line);">
           <div style="font-size:11px; color:var(--text-low); margin-bottom:5px;">إجمالي الأرباح</div>
           <div style="font-family:'Big Shoulders Display'; font-size:24px; font-weight:bold; color:var(--ore-gold);" id="totalEarned">0 ORE</div>
+          <div class="usd-amount" id="totalUSD">$0.00</div>
         </div>
       </div>
     </section>
 
-    <!-- Tab 2: Tasks (loaded from backend) -->
+    <!-- Tab 2: Tasks -->
     <section id="tab-tasks" class="hidden">
       <h2 class="section-title">المهام اليومية 📋</h2>
       <div id="tasksList">
@@ -142,19 +152,39 @@
       </div>
     </section>
 
-    <!-- Tab 5: Wallet -->
+    <!-- Tab 5: Wallet (Withdrawal) -->
     <section id="tab-wallet" class="hidden">
       <h2 class="section-title">سحب الأرباح 💰</h2>
-      <div style="background:linear-gradient(145deg, var(--surface), #12161C); margin:0 20px; padding:40px; border-radius:30px; border:1px solid var(--line); text-align:center; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+      
+      <!-- عرض الرصيد بالدولار -->
+      <div style="background:linear-gradient(145deg, var(--surface), #12161C); margin:0 20px; padding:30px; border-radius:30px; border:1px solid var(--line); text-align:center; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
         <div style="font-size:15px; color:var(--text-mid);">الرصيد الحالي</div>
-        <div style="font-size:50px; font-family:'Big Shoulders Display'; color:var(--vein-teal); margin:15px 0;" id="walletBalance">0 ORE</div>
-        <div style="font-size:11px; color:var(--text-low); text-transform:uppercase; letter-spacing:1px;">الحد الأدنى للسحب: 20$</div>
-        <button class="btn-go" style="width:100%; padding:14px; margin-top:20px;" onclick="requestWithdrawal()">طلب سحب</button>
+        <div style="font-size:50px; font-family:'Big Shoulders Display'; color:var(--vein-teal); margin:10px 0;" id="walletBalance">0 ORE</div>
+        <div style="font-size:18px; font-weight:bold; color:var(--ore-gold);" id="walletUSD">$0.00</div>
+        <div style="font-size:11px; color:var(--text-low); text-transform:uppercase; letter-spacing:1px; margin-top:5px;">سعر الصرف: 1 دولار = 1000 ORE</div>
       </div>
-      <div style="padding:30px 20px; font-size:13px; color:var(--text-mid); line-height:1.8; border-top:1px solid var(--line); margin-top:20px;">
-        <h3 style="color:var(--ore-gold); margin-bottom:10px;">متطلبات فتح السحب:</h3>
+
+      <!-- نموذج السحب الجديد -->
+      <div class="withdraw-form">
+        <h3 style="color:var(--vein-teal); margin-bottom:10px;">🔗 ربط المحفظة</h3>
+        <label>عنوان محفظتك (TON)</label>
+        <input type="text" id="walletAddressInput" placeholder="أدخل عنوان TON الخاص بك" style="margin-bottom:10px;">
+        <button class="btn-go" style="width:100%; background:var(--ore-gold);" onclick="saveWalletAddress()">💾 حفظ المحفظة</button>
+        
+        <hr style="border-color:var(--line); margin:20px 0;">
+        
+        <h3 style="color:var(--vein-teal); margin-bottom:10px;">💸 طلب سحب</h3>
+        <label>المبلغ المراد سحبه (ORE)</label>
+        <input type="number" id="withdrawAmount" placeholder="أدخل المبلغ" min="1000" step="100" style="margin-bottom:10px;">
+        <div style="font-size:12px; color:var(--text-low); margin-bottom:12px;">الحد الأدنى: 1000 ORE (≈1 دولار)</div>
+        <button class="btn-go" style="width:100%;" onclick="requestWithdrawal()">تقديم طلب السحب</button>
+      </div>
+
+      <div style="padding:20px 20px; font-size:13px; color:var(--text-mid); line-height:1.8; border-top:1px solid var(--line); margin-top:10px;">
+        <h3 style="color:var(--ore-gold); margin-bottom:10px;">📌 متطلبات فتح السحب:</h3>
         • الوصول للمستوى 5 في التعدين.<br>
         • دعوة 10 أصدقاء نشطين على الأقل.<br>
+        • رسوم السحب: 5% (تذهب لتطوير البوت).
       </div>
     </section>
 
@@ -186,6 +216,7 @@
 <script>
   // ====== CONFIG ======
   const API_URL = 'https://deepvein-production.up.railway.app';
+  const USD_RATE = 1000; // 1000 ORE = 1 دولار
 
   // ====== STATE ======
   let telegramId = null;
@@ -194,6 +225,7 @@
   let level = 1;
   let tapVal = 2;
   let tapLock = false;
+  let walletAddress = null;
 
   const balEl = document.getElementById('balanceMain');
   const enFill = document.getElementById('energyFill');
@@ -201,6 +233,8 @@
   const levelEl = document.getElementById('level');
   const walletBalEl = document.getElementById('walletBalance');
   const totalEarnedEl = document.getElementById('totalEarned');
+  const walletUSDEl = document.getElementById('walletUSD');
+  const totalUSDEl = document.getElementById('totalUSD');
 
   function updateUI() {
     balEl.textContent = balance.toLocaleString();
@@ -209,13 +243,18 @@
     levelEl.textContent = level;
     walletBalEl.textContent = balance.toLocaleString() + " ORE";
     totalEarnedEl.textContent = balance.toLocaleString() + " ORE";
+    
+    // تحديث الدولار
+    const usd = (balance / USD_RATE).toFixed(2);
+    walletUSDEl.textContent = '$' + usd;
+    totalUSDEl.textContent = '$' + usd;
   }
 
   function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
-    setTimeout(()=> t.classList.remove('show'), 2200);
+    setTimeout(()=> t.classList.remove('show'), 2500);
   }
 
   async function apiPost(path, body) {
@@ -240,6 +279,8 @@
         balance = result.user.ore || 0;
         energy = result.user.energy ?? 1000;
         level = result.user.level || 1;
+        walletAddress = result.user.wallet_address || null;
+        if (walletAddress) document.getElementById('walletAddressInput').value = walletAddress;
         updateUI();
       }
     } catch (e) {
@@ -270,7 +311,6 @@
     try {
       const result = await apiPost('/api/mining/tap', { telegramId });
       if (result.success && result.user) {
-        // Sync with server truth
         balance = result.user.ore;
         energy = result.user.energy;
         updateUI();
@@ -380,12 +420,60 @@
   }
 
   // ====== WALLET ======
+  function saveWalletAddress() {
+    const addr = document.getElementById('walletAddressInput').value.trim();
+    if (!addr) {
+      showToast('يرجى إدخال عنوان محفظة صحيح');
+      return;
+    }
+    // نرسل العنوان إلى السيرفر لحفظه (لو عندنا API)
+    // حالياً سنحفظه محلياً ونعرض رسالة
+    walletAddress = addr;
+    showToast('✅ تم حفظ عنوان المحفظة بنجاح!');
+    // يمكنك إضافة endpoint لتخزينه في قاعدة البيانات إذا أردت.
+  }
+
   async function requestWithdrawal() {
+    if (!telegramId) {
+      showToast('يرجى تسجيل الدخول أولاً');
+      return;
+    }
+    
+    const amount = parseFloat(document.getElementById('withdrawAmount').value);
+    const addr = document.getElementById('walletAddressInput').value.trim();
+    
+    if (!addr) {
+      showToast('يرجى إدخال عنوان محفظتك أولاً');
+      return;
+    }
+    
+    if (isNaN(amount) || amount < 1000) {
+      showToast('الحد الأدنى للسحب هو 1000 ORE');
+      return;
+    }
+    
+    if (amount > balance) {
+      showToast('الرصيد غير كافي');
+      return;
+    }
+
     try {
-      const result = await apiPost('/api/withdrawal/request', { telegramId, amount: balance });
-      showToast(result.message || 'تم إرسال الطلب');
+      const result = await apiPost('/api/withdrawal/request', {
+        telegramId,
+        amount,
+        walletAddress: addr
+      });
+      
+      if (result.success) {
+        showToast(result.message || '✅ تم تقديم طلب السحب بنجاح');
+        refreshUser();
+        document.getElementById('withdrawAmount').value = '';
+      } else {
+        showToast(result.message || 'حدث خطأ في الطلب');
+      }
     } catch (e) {
       showToast('تعذر الاتصال بالسيرفر');
+      console.error(e);
     }
   }
 
@@ -398,6 +486,8 @@
         balance = result.user.ore;
         energy = result.user.energy;
         level = result.user.level;
+        walletAddress = result.user.wallet_address || null;
+        if (walletAddress) document.getElementById('walletAddressInput').value = walletAddress;
         updateUI();
       }
     } catch (e) {
@@ -415,6 +505,10 @@
 
     if (id === 'tasks') loadTasks();
     if (id === 'ref') { loadReferral(); loadLeaderboard(); }
+    if (id === 'wallet') {
+      // تحديث الرصيد عند الدخول للتبويب
+      refreshUser();
+    }
   }
 
   // ====== TELEGRAM SETUP ======
@@ -431,7 +525,6 @@
     document.getElementById('uInit').textContent = u.first_name.charAt(0).toUpperCase();
     registerUser(telegramId, u.username || u.first_name);
   } else {
-    // Fallback for testing outside Telegram (preview, browser, etc.)
     showToast('افتح اللعبة من داخل تيليجرام لتشغيل كامل الميزات');
   }
 
