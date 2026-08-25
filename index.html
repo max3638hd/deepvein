@@ -288,7 +288,6 @@
     walletUSDEl.textContent = '$' + usd;
     totalUSDEl.textContent = '$' + usd;
 
-    // Update Tap Rate Display
     let rate = 2;
     if (vipLevel === 'bronze') rate = 3;
     if (vipLevel === 'gold') rate = 4;
@@ -296,7 +295,6 @@
     if (isBoost) rate = rate * 2;
     tapRateDisplay.textContent = '+' + rate + ' ORE';
 
-    // Update indicators
     if (isBoost) { boostIndicator.style.display = 'inline'; } else { boostIndicator.style.display = 'none'; }
     if (vipLevel !== 'none') { vipBadge.style.display = 'inline'; vipBadge.textContent = 'VIP ' + vipLevel.toUpperCase(); } else { vipBadge.style.display = 'none'; }
   }
@@ -399,7 +397,6 @@
       const result = await apiPost('/api/mining/tap', { telegramId });
       if (result.success && result.user) { 
         balance = result.user.ore; energy = result.user.energy; 
-        // update local state from server response
         vipLevel = result.user.vip_level || 'none';
         boostExpiry = result.user.boost_expiry || null;
         updateUI(); 
@@ -410,14 +407,146 @@
   });
 
   // ====== TASKS ======
-  async function loadTasks() { /* same as before, omitted for brevity but keep */ }
-  async function completeTask(taskId, btn) { /* same */ }
-  async function buyUpgrade(upgradeId, cost, btn) { /* same */ }
-  async function loadReferral() { /* same */ }
-  function copyRef() { /* same */ }
-  async function loadLeaderboard() { /* same */ }
-  function saveWalletAddress() { /* same */ }
-  async function requestWithdrawal() { /* same */ }
+  async function loadTasks() {
+    const listEl = document.getElementById('tasksList');
+    try {
+      const result = await apiGet('/api/tasks');
+      if (result.success && result.tasks && result.tasks.length) {
+        listEl.innerHTML = result.tasks.map(t => `
+          <div class="card">
+            <div class="card-info">
+              <div class="card-title">${t.title || 'مهمة'}</div>
+              <div class="card-sub">+${t.reward || 100} ORE</div>
+            </div>
+            <button class="btn-go" onclick="completeTask('${t.id}', this)">إتمام</button>
+          </div>
+        `).join('');
+      } else {
+        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-low); font-size:13px;">لا توجد مهام حاليًا</div>';
+      }
+    } catch (e) {
+      listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-low); font-size:13px;">تعذر تحميل المهام</div>';
+    }
+  }
+
+  async function completeTask(taskId, btn) {
+    btn.disabled = true;
+    try {
+      const result = await apiPost('/api/task/complete', { telegramId, taskId });
+      if (result.success) {
+        btn.textContent = "تمت ✅";
+        showToast(result.message || 'تم إنجاز المهمة');
+        refreshUser();
+      } else {
+        btn.disabled = false;
+        showToast(result.message || 'حدث خطأ');
+      }
+    } catch (e) {
+      btn.disabled = false;
+      showToast('تعذر الاتصال بالسيرفر');
+    }
+  }
+
+  // ====== STORE ======
+  async function buyUpgrade(upgradeId, cost, btn) {
+    btn.disabled = true;
+    try {
+      const result = await apiPost('/api/store/upgrade', { telegramId, upgradeId });
+      showToast(result.message || (result.success ? 'تم الشراء' : 'حدث خطأ'));
+      if (result.success) refreshUser();
+    } catch (e) {
+      showToast('تعذر الاتصال بالسيرفر');
+    }
+    btn.disabled = false;
+  }
+
+  // ============================================================
+  // ✅ REFERRAL - تم إصلاح الدالة
+  // ============================================================
+  async function loadReferral() {
+    if (!telegramId) {
+        document.getElementById('refLink').textContent = '⚠️ يرجى تسجيل الدخول أولاً';
+        return;
+    }
+    try {
+        const result = await apiGet('/api/referral/link/' + telegramId);
+        if (result.success) {
+            document.getElementById('refLink').textContent = result.referralLink;
+        } else {
+            document.getElementById('refLink').textContent = '⚠️ تعذر إنشاء الرابط';
+        }
+    } catch (e) {
+        console.error(e);
+        document.getElementById('refLink').textContent = '⚠️ خطأ في الاتصال بالسيرفر';
+    }
+  }
+  // ============================================================
+
+  function copyRef() {
+    const link = document.getElementById('refLink').textContent;
+    if (!link || link.includes('⚠️')) { showToast('الرابط غير متوفر'); return; }
+    navigator.clipboard.writeText(link);
+    if (window.Telegram && window.Telegram.WebApp.showAlert) {
+      window.Telegram.WebApp.showAlert("تم نسخ الرابط بنجاح!");
+    } else {
+      showToast('تم نسخ الرابط');
+    }
+  }
+
+  async function loadLeaderboard() {
+    const listEl = document.getElementById('leaderboardList');
+    try {
+      const result = await apiGet('/api/leaderboard');
+      if (result.success && result.leaderboard && result.leaderboard.length) {
+        listEl.innerHTML = result.leaderboard.slice(0, 10).map((u, i) => `
+          <div class="card">
+            <div style="font-weight:bold; color:${i === 0 ? 'var(--ore-gold)' : 'var(--text-mid)'}; width:20px;">${i+1}</div>
+            <div class="card-info">
+              <div class="card-title">${u.username}</div>
+              <div class="card-sub">${(u.ore||0).toLocaleString()} ORE</div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        listEl.innerHTML = '<div style="padding:0 20px; text-align:center; color:var(--text-low); font-size:13px;">لا يوجد بيانات بعد</div>';
+      }
+    } catch (e) {
+      listEl.innerHTML = '<div style="padding:0 20px; text-align:center; color:var(--text-low); font-size:13px;">تعذر تحميل القائمة</div>';
+    }
+  }
+
+  // ====== WALLET ======
+  function saveWalletAddress() {
+    const addr = document.getElementById('walletAddressInput').value.trim();
+    if (!addr) { showToast('يرجى إدخال عنوان محفظة صحيح'); return; }
+    walletAddress = addr;
+    showToast('✅ تم حفظ عنوان المحفظة بنجاح!');
+  }
+
+  async function requestWithdrawal() {
+    if (!telegramId) { showToast('يرجى تسجيل الدخول أولاً'); return; }
+    const amount = parseFloat(document.getElementById('withdrawAmount').value);
+    const addr = document.getElementById('walletAddressInput').value.trim();
+    if (!addr) { showToast('يرجى إدخال عنوان محفظتك أولاً'); return; }
+    if (isNaN(amount) || amount < 1000) { showToast('الحد الأدنى للسحب هو 1000 ORE'); return; }
+    if (amount > balance) { showToast('الرصيد غير كافي'); return; }
+
+    try {
+      const result = await apiPost('/api/withdrawal/request', { telegramId, amount, walletAddress: addr });
+      if (result.success) {
+        showToast(result.message || '✅ تم تقديم طلب السحب بنجاح');
+        refreshUser();
+        document.getElementById('withdrawAmount').value = '';
+      } else {
+        showToast(result.message || 'حدث خطأ في الطلب');
+      }
+    } catch (e) {
+      showToast('تعذر الاتصال بالسيرفر');
+      console.error(e);
+    }
+  }
+
+  // ====== REFRESH USER ======
   async function refreshUser() {
     if (!telegramId) return;
     try {
@@ -459,7 +588,7 @@
     showToast('افتح اللعبة من داخل تيليجرام لتشغيل كامل الميزات');
   }
   
-  // Placeholder for missing functions to avoid errors
+  // Expose functions globally
   window.loadTasks = loadTasks;
   window.completeTask = completeTask;
   window.buyUpgrade = buyUpgrade;
@@ -472,9 +601,8 @@
   window.switchTab = switchTab;
   window.purchaseVIP = purchaseVIP;
   window.activateBoost = activateBoost;
-  window.showAd = showAd;
   
   updateUI();
 </script>
 </body>
-  </html>
+      </html>
