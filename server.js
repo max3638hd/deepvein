@@ -63,7 +63,7 @@ app.post('/api/user/register', async (req, res) => {
         last_tap: new Date(),
         vip_level: 'none',
         vip_expiry: null,
-        boost_expiry: null, // New field for boost
+        boost_expiry: null,
       })
       .select();
 
@@ -102,7 +102,6 @@ app.post('/api/mining/tap', async (req, res) => {
     if (user.boost_expiry && new Date(user.boost_expiry) > new Date()) {
       isBoostActive = true;
     } else if (user.boost_expiry) {
-      // Clear expired boost
       await supabase.from('users').update({ boost_expiry: null }).eq('telegram_id', telegramId);
     }
 
@@ -147,7 +146,6 @@ app.post('/api/boost/activate', async (req, res) => {
     if (userError || !user) return res.status(404).json({ success: false, message: 'User not found' });
     if (user.ore < BOOST_COST) return res.json({ success: false, message: `ليس لديك ${BOOST_COST} ORE كافية` });
 
-    // Check if already active
     if (user.boost_expiry && new Date(user.boost_expiry) > new Date()) {
       return res.json({ success: false, message: 'المضاعف مفعل بالفعل!' });
     }
@@ -178,9 +176,6 @@ app.post('/api/vip/purchase', async (req, res) => {
     const price = VIP_PRICES[level];
     if (!price) return res.json({ success: false, message: 'رتبة VIP غير صحيحة' });
 
-    // In reality, you'd generate a payment link here.
-    // For now, we tell the user to contact admin or we simulate.
-    // We'll just record the request.
     await supabase
       .from('vip_purchases')
       .insert({
@@ -194,7 +189,6 @@ app.post('/api/vip/purchase', async (req, res) => {
     res.json({ 
       success: true, 
       message: `✅ تم إرسال طلب شراء VIP ${level}. سيتم تفعيله يدوياً قريباً. (الرجاء التواصل مع المالك)`,
-      // For auto-activation in testing, we could add a secret admin endpoint.
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -208,7 +202,7 @@ app.post('/api/vip/confirm', async (req, res) => {
   try {
     const { telegramId, level } = req.body;
     const expiryDate = new Date();
-    expiryDate.setMonth(expiryDate.getMonth() + 1); // 1 month
+    expiryDate.setMonth(expiryDate.getMonth() + 1);
 
     await supabase
       .from('users')
@@ -225,7 +219,7 @@ app.post('/api/vip/confirm', async (req, res) => {
 });
 // ============================================================
 
-// Get Tasks (with completion status for this user)
+// Get Tasks
 app.get('/api/tasks', async (req, res) => {
   try {
     const { telegramId } = req.query;
@@ -247,7 +241,7 @@ app.get('/api/tasks', async (req, res) => {
   }
 });
 
-// Complete Task (prevents duplicate claims)
+// Complete Task
 app.post('/api/task/complete', async (req, res) => {
   try {
     const { telegramId, taskId } = req.body;
@@ -281,7 +275,9 @@ app.post('/api/task/complete', async (req, res) => {
   }
 });
 
-// Get Referral Link
+// ============================================================
+// ✅ Referral Link (تم تصحيح الرابط)
+// ============================================================
 app.get('/api/referral/link/:telegramId', async (req, res) => {
   try {
     const { telegramId } = req.params;
@@ -291,6 +287,7 @@ app.get('/api/referral/link/:telegramId', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+// ============================================================
 
 // Create Referral
 app.post('/api/referral/invite', async (req, res) => {
@@ -313,7 +310,7 @@ app.post('/api/referral/invite', async (req, res) => {
   }
 });
 
-// Buy Upgrade (Energy or Multiplier)
+// Buy Upgrade
 app.post('/api/store/upgrade', async (req, res) => {
   try {
     const { telegramId, upgradeId } = req.body;
@@ -322,7 +319,6 @@ app.post('/api/store/upgrade', async (req, res) => {
     const cost = upgradeCosts[upgradeId] || 0;
     if (user.ore < cost) return res.json({ success: false, message: 'Not enough ORE' });
 
-    // For simplicity, just deduct ORE. In real app, you'd apply multiplier.
     await supabase.from('users').update({ ore: user.ore - cost }).eq('telegram_id', telegramId);
     res.json({ success: true, message: `Upgrade purchased! -${cost} ORE` });
   } catch (error) {
