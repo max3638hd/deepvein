@@ -460,27 +460,27 @@
     btn.disabled = false;
   }
 
-  // ============================================================
-  // ✅ REFERRAL - تم إصلاح الدالة
-  // ============================================================
+  // ====== REFERRAL (FIXED) ======
   async function loadReferral() {
+    const linkElement = document.getElementById('refLink');
+    
     if (!telegramId) {
-        document.getElementById('refLink').textContent = '⚠️ يرجى تسجيل الدخول أولاً';
+        linkElement.textContent = '⚠️ يرجى تسجيل الدخول أولاً';
         return;
     }
+    
     try {
         const result = await apiGet('/api/referral/link/' + telegramId);
         if (result.success) {
-            document.getElementById('refLink').textContent = result.referralLink;
+            linkElement.textContent = result.referralLink;
         } else {
-            document.getElementById('refLink').textContent = '⚠️ تعذر إنشاء الرابط';
+            linkElement.textContent = '⚠️ تعذر إنشاء الرابط';
         }
     } catch (e) {
         console.error(e);
-        document.getElementById('refLink').textContent = '⚠️ خطأ في الاتصال بالسيرفر';
+        linkElement.textContent = '⚠️ خطأ في الاتصال بالسيرفر';
     }
   }
-  // ============================================================
 
   function copyRef() {
     const link = document.getElementById('refLink').textContent;
@@ -570,8 +570,12 @@
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('mainScroll').scrollTop = 0;
+    
     if (id === 'tasks') loadTasks();
-    if (id === 'ref') { loadReferral(); loadLeaderboard(); }
+    if (id === 'ref') { 
+      loadReferral(); 
+      loadLeaderboard(); 
+    }
     if (id === 'wallet') { refreshUser(); }
   }
 
@@ -605,4 +609,4 @@
   updateUI();
 </script>
 </body>
-      </html>
+  </html>
