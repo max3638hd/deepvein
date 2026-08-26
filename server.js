@@ -398,6 +398,13 @@ app.get('/api/user/:telegramId', async (req, res) => {
   }
 });
 
+// ============================================================
+// ✅ تشغيل نظام Stars (ملف منفصل)
+// ============================================================
+const starsPayment = require('./stars-payment');
+starsPayment(app, supabase);
+// ============================================================
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Deep Vein Server running on port ${PORT}`);
