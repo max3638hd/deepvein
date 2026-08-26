@@ -4,7 +4,6 @@ const { createClient } = require('@supabase/supabase-js');
 const cors = require('cors');
 require('dotenv').config();
 
-// Supabase Setup
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
@@ -12,35 +11,25 @@ const supabase = createClient(
 
 const app = express();
 
-// Middleware
 app.use(express.json());
 app.use(cors());
 
-// ============================================================
-// 🔥 تم زيادة سرعة التعدين والطاقة
-// ============================================================
-const ORE_PER_TAP = 5;        // 5 ORE لكل ضغطة (كانت 2)
-const ENERGY_MAX = 5000;      // طاقة قصوى 5000 (كانت 1000)
-const ENERGY_REGEN_RATE = 5;  // تجديد 5 طاقة كل 5 ثواني (يتم في الواجهة)
-// ============================================================
-
+const ORE_PER_TAP = 5;
+const ENERGY_MAX = 5000;
 const REFERRAL_REWARD_REFERRER = 500;
 const REFERRAL_REWARD_REFERRED = 300;
-const MIN_WITHDRAWAL = 1000; 
+const MIN_WITHDRAWAL = 1000;
 const WITHDRAWAL_THRESHOLD_LEVEL = 5;
 const MIN_REFERRALS = 10;
 
-// VIP Prices (USD)
 const VIP_PRICES = { bronze: 5, gold: 10 };
 const BOOST_COST = 200;
-const BOOST_DURATION_MS = 3600000; // 1 hour
+const BOOST_DURATION_MS = 3600000;
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Deep Vein Server is running' });
 });
 
-// Register or Update User
 app.post('/api/user/register', async (req, res) => {
   try {
     const { telegramId, username } = req.body;
@@ -78,9 +67,6 @@ app.post('/api/user/register', async (req, res) => {
   }
 });
 
-// ============================================================
-// ✅ Mining with VIP & BOOST support (سرعة أسرع)
-// ============================================================
 app.post('/api/mining/tap', async (req, res) => {
   try {
     const { telegramId } = req.body;
@@ -94,14 +80,12 @@ app.post('/api/mining/tap', async (req, res) => {
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     if (user.energy <= 0) return res.json({ success: false, message: 'Not enough energy' });
 
-    // 1. Check VIP expiry
     let vipLevel = user.vip_level || 'none';
     if (vipLevel !== 'none' && user.vip_expiry && new Date(user.vip_expiry) < new Date()) {
       await supabase.from('users').update({ vip_level: 'none', vip_expiry: null }).eq('telegram_id', telegramId);
       vipLevel = 'none';
     }
 
-    // 2. Check Boost expiry
     let isBoostActive = false;
     if (user.boost_expiry && new Date(user.boost_expiry) > new Date()) {
       isBoostActive = true;
@@ -109,13 +93,11 @@ app.post('/api/mining/tap', async (req, res) => {
       await supabase.from('users').update({ boost_expiry: null }).eq('telegram_id', telegramId);
     }
 
-    // 3. Calculate ORE per tap (مضاعفة VIP + Boost)
-    let orePerTap = ORE_PER_TAP; // 5
-    if (vipLevel === 'bronze') orePerTap = Math.floor(ORE_PER_TAP * 1.5); // 7
-    if (vipLevel === 'gold') orePerTap = ORE_PER_TAP * 2; // 10
-    if (isBoostActive) orePerTap = orePerTap * 2; // مضاعف الضعف
+    let orePerTap = ORE_PER_TAP;
+    if (vipLevel === 'bronze') orePerTap = Math.floor(ORE_PER_TAP * 1.5);
+    if (vipLevel === 'gold') orePerTap = ORE_PER_TAP * 2;
+    if (isBoostActive) orePerTap = orePerTap * 2;
 
-    // 4. Update database
     const { data: updated, error: updateError } = await supabase
       .from('users')
       .update({
@@ -133,11 +115,7 @@ app.post('/api/mining/tap', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-// ============================================================
 
-// ============================================================
-// ✅ Boost Activation
-// ============================================================
 app.post('/api/boost/activate', async (req, res) => {
   try {
     const { telegramId } = req.body;
@@ -169,11 +147,7 @@ app.post('/api/boost/activate', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-// ============================================================
 
-// ============================================================
-// ✅ VIP Purchase
-// ============================================================
 app.post('/api/vip/purchase', async (req, res) => {
   try {
     const { telegramId, level } = req.body;
@@ -190,8 +164,8 @@ app.post('/api/vip/purchase', async (req, res) => {
         created_at: new Date()
       });
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: `✅ تم إرسال طلب شراء VIP ${level}. سيتم تفعيله يدوياً قريباً. (الرجاء التواصل مع المالك)`,
     });
   } catch (error) {
@@ -199,9 +173,6 @@ app.post('/api/vip/purchase', async (req, res) => {
   }
 });
 
-// ============================================================
-// ✅ Admin: Confirm VIP
-// ============================================================
 app.post('/api/vip/confirm', async (req, res) => {
   try {
     const { telegramId, level } = req.body;
@@ -221,9 +192,7 @@ app.post('/api/vip/confirm', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-// ============================================================
 
-// Get Tasks
 app.get('/api/tasks', async (req, res) => {
   try {
     const { telegramId } = req.query;
@@ -245,7 +214,6 @@ app.get('/api/tasks', async (req, res) => {
   }
 });
 
-// Complete Task
 app.post('/api/task/complete', async (req, res) => {
   try {
     const { telegramId, taskId } = req.body;
@@ -279,9 +247,6 @@ app.post('/api/task/complete', async (req, res) => {
   }
 });
 
-// ============================================================
-// ✅ Referral Link
-// ============================================================
 app.get('/api/referral/link/:telegramId', async (req, res) => {
   try {
     const { telegramId } = req.params;
@@ -291,9 +256,7 @@ app.get('/api/referral/link/:telegramId', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-// ============================================================
 
-// Create Referral
 app.post('/api/referral/invite', async (req, res) => {
   try {
     const { referrerTelegramId, referredTelegramId } = req.body;
@@ -314,7 +277,6 @@ app.post('/api/referral/invite', async (req, res) => {
   }
 });
 
-// Buy Upgrade
 app.post('/api/store/upgrade', async (req, res) => {
   try {
     const { telegramId, upgradeId } = req.body;
@@ -330,9 +292,6 @@ app.post('/api/store/upgrade', async (req, res) => {
   }
 });
 
-// ============================================================
-// ✅ Withdrawal with 5% fee
-// ============================================================
 app.post('/api/withdrawal/request', async (req, res) => {
   try {
     const { telegramId, amount, walletAddress } = req.body;
@@ -355,11 +314,7 @@ app.post('/api/withdrawal/request', async (req, res) => {
     res.status(500).json({ success: false, error: 'حدث خطأ في الخادم' });
   }
 });
-// ============================================================
 
-// ============================================================
-// ✅ Ad Reward
-// ============================================================
 app.post('/api/ad/reward', async (req, res) => {
   try {
     const { telegramId } = req.body;
@@ -373,9 +328,7 @@ app.post('/api/ad/reward', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-// ============================================================
 
-// Get Leaderboard
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const { data, error } = await supabase.from('users').select('username, ore, level').order('ore', { ascending: false }).limit(50);
@@ -386,7 +339,6 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
-// Get User Stats
 app.get('/api/user/:telegramId', async (req, res) => {
   try {
     const { telegramId } = req.params;
@@ -397,13 +349,6 @@ app.get('/api/user/:telegramId', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
-// ============================================================
-// ✅ تشغيل نظام Stars (ملف منفصل)
-// ============================================================
-const starsPayment = require('./stars-payment');
-starsPayment(app, supabase);
-// ============================================================
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
