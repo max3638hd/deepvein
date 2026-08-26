@@ -1,7 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { createClient } = require('@supabase/supabase-js');
-// 🔹 استدعاء نظام Stars (ملف منفصل)
-const attachStarsPayment = require('./stars-payment');
 
 function setupBot(app) {
   const token = process.env.BOT_TOKEN;
@@ -14,9 +12,6 @@ function setupBot(app) {
   }
 
   const bot = new TelegramBot(token, { polling: true });
-
-  // 🔹 تفعيل نظام Stars (يضيف أمر /shop وأزرار الدفع)
-  attachStarsPayment(bot);
 
   bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
     const chatId = msg.chat.id;
