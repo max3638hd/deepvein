@@ -1,95 +1,93 @@
+// ============================================================
+// bot.js — بوت Telegram محدث مع Telegram Stars
+// انسخه مباشرة بدون تعديل
+// ============================================================
+
 const TelegramBot = require('node-telegram-bot-api');
 const { createClient } = require('@supabase/supabase-js');
+const attachStarsPayment = require('./stars-payment'); // ⭐ ربط Stars
 
-function setupBot(app) {
-  const token = process.env.BOT_TOKEN;
-  const gameUrl = process.env.GAME_URL || 'https://max3638hd.github.io/deepvein/';
-  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-  if (!token) {
-    console.log('⚠️ BOT_TOKEN not set, Telegram bot disabled');
-    return;
-  }
+// فعّل نظام Stars الحقيقي (بس سطر واحد!)
+attachStarsPayment(bot);
 
-  const bot = new TelegramBot(token, { polling: true });
+const GAME_URL = process.env.GAME_URL || 'https://max3638hd.github.io/deepvein/';
+const BOT_USERNAME = 'nabdbooks_bot';
 
-  bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const telegramId = String(msg.from.id);
-    const referrerId = match && match[1] ? match[1].trim() : null;
+// ============= /start =============
+bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id.toString();
+  const userName = msg.from.first_name || 'لاعب';
+  const referrerId = match[1];
 
-    try {
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('telegram_id')
-        .eq('telegram_id', telegramId)
-        .maybeSingle();
+  try {
+    // تسجيل اللاعب الجديد أو الحالي
+    const { data: user } = await supabase.from('users').select('*').eq('telegram_id', userId).single();
+    
+    if (!user) {
+      // لاعب جديد
+      await supabase.from('users').insert([{
+        telegram_id: userId,
+        username: userName,
+        ore: 0,
+        energy: 5000,
+        max_energy: 5000,
+        total_earned: 0
+      }]);
 
-      if (!existingUser && referrerId && referrerId !== telegramId) {
-        await supabase.from('users').insert({
-          telegram_id: telegramId,
-          username: msg.from.username || `user_${telegramId}`,
-          ore: 300,
-          energy: 1000,
-          level: 1,
-          referral_count: 0,
-          total_earned: 300,
-          last_tap: new Date(),
-        });
-
-        const { error: refError } = await supabase.from('referrals').insert({
-          referrer_telegram_id: referrerId,
-          referred_telegram_id: telegramId,
-        });
-
-        if (!refError) {
-          const { data: referrer } = await supabase
-            .from('users')
-            .select('ore, referral_count')
-            .eq('telegram_id', referrerId)
-            .maybeSingle();
-
-          if (referrer) {
-            await supabase
-              .from('users')
-              .update({
-                ore: referrer.ore + 500,
-                referral_count: (referrer.referral_count || 0) + 1,
-              })
-              .eq('telegram_id', referrerId);
-
-            bot.sendMessage(referrerId, '🎉 صديق جديد انضم عن طريق رابطك! +500 ORE').catch(() => {});
-          }
+      // معالجة الإحالة
+      if (referrerId && referrerId !== userId) {
+        const { data: referrer } = await supabase.from('users').select('*').eq('telegram_id', referrerId).single();
+        if (referrer) {
+          await supabase.from('referrals').insert([{
+            referrer_id: referrerId,
+            referred_id: userId,
+            reward: 500
+          }]);
+          await supabase.from('users').update({ ore: referrer.ore + 500 }).eq('telegram_id', referrerId);
+          
+          try {
+            bot.sendMessage(referrerId, `🎉 صديق جديد انضم من رابطك! حصلت على 500 ORE`);
+          } catch (e) { /* المستخدم أوقف البوت */ }
         }
-      } else if (!existingUser) {
-        await supabase.from('users').insert({
-          telegram_id: telegramId,
-          username: msg.from.username || `user_${telegramId}`,
-          ore: 0,
-          energy: 1000,
-          level: 1,
-          referral_count: 0,
-          total_earned: 0,
-          last_tap: new Date(),
-        });
       }
-
-      bot.sendMessage(chatId, '🔥⛏️ أهلاً بك يا ' + (msg.from.first_name || 'صديقنا') + ' في Deep Vein Mine!\n\nالواجهة الاحترافية جاهزة الآن، اضغط الزر أدناه للدخول للعبة بالتبويبات الجديدة.', {
-        reply_markup: {
-          inline_keyboard: [[{ text: '⛏️ العب الآن', web_app: { url: gameUrl } }]],
-        },
-      });
-    } catch (err) {
-      console.error('Bot /start error:', err.message);
-      bot.sendMessage(chatId, '⛏️ أهلاً بك! اضغط الزر أدناه للعب.', {
-        reply_markup: {
-          inline_keyboard: [[{ text: '⛏️ العب الآن', web_app: { url: gameUrl } }]],
-        },
-      });
     }
-  });
 
-  console.log('🤖 Telegram bot polling started');
-}
+    bot.sendMessage(chatId,
+      `🎮 <b>أهلاً وسهلاً في Deep Vein!</b>\n\n` +
+      `⛏️ ابدأ التعدين الآن واحقق أرباح حقيقية!\n\n` +
+      `💎 اشتري VIP و ORE بـ Telegram Stars (دفع فوري وآمن 100%)`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🎮 لعب الآن', url: `${GAME_URL}?id=${userId}` }],
+            [{ text: '⭐ متجر Stars', callback_data: 'shop_stars' }],
+            [{ text: '👥 اشرح صديقك', callback_data: 'referral' }],
+            [{ text: '📊 إحصائياتي', callback_data: 'stats' }]
+          ]
+        }
+      }
+    );
+  } catch (e) {
+    console.error('Error in /start:', e);
+    bot.sendMessage(chatId, '❌ حدث خطأ، حاول لاحقاً');
+  }
+});
 
-module.exports = setupBot;
+// ============= Callback Queries =============
+// ملف stars-payment.js يتكفل بـ كل callback queries (including buy_* و referral و stats)
+// في الملف الجديد stars-payment.js ستجد handler واحد لـ callback_query يتكفل بكل الأزرار
+// هنا ما نسجل callback_query عشان ما يحصل تضارب
+
+// ============= معالجات دفع Stars (يُتعامل معها في stars-payment.js) =============
+// لا تضيف معالجات إضافية هنا — stars-payment.js يتكفل بـ:
+// - bot.on('pre_checkout_query')
+// - bot.on('successful_payment')
+
+console.log('✅ Bot initialized successfully');
+
+module.exports = bot;
