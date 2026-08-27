@@ -1,22 +1,12 @@
-// ============================================================
-// bot.js — بوت Telegram محدث مع Telegram Stars
-// انسخه مباشرة بدون تعديل
-// ============================================================
-
 const TelegramBot = require('node-telegram-bot-api');
 const { createClient } = require('@supabase/supabase-js');
-const attachStarsPayment = require('./stars-payment'); // ⭐ ربط Stars
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-// فعّل نظام Stars الحقيقي (بس سطر واحد!)
-attachStarsPayment(bot);
-
 const GAME_URL = process.env.GAME_URL || 'https://max3638hd.github.io/deepvein/';
 const BOT_USERNAME = 'nabdbooks_bot';
 
-// ============= /start =============
 bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id.toString();
@@ -24,11 +14,9 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
   const referrerId = match[1];
 
   try {
-    // تسجيل اللاعب الجديد أو الحالي
     const { data: user } = await supabase.from('users').select('*').eq('telegram_id', userId).single();
     
     if (!user) {
-      // لاعب جديد
       await supabase.from('users').insert([{
         telegram_id: userId,
         username: userName,
@@ -38,7 +26,6 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
         total_earned: 0
       }]);
 
-      // معالجة الإحالة
       if (referrerId && referrerId !== userId) {
         const { data: referrer } = await supabase.from('users').select('*').eq('telegram_id', referrerId).single();
         if (referrer) {
@@ -48,24 +35,20 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
             reward: 500
           }]);
           await supabase.from('users').update({ ore: referrer.ore + 500 }).eq('telegram_id', referrerId);
-          
           try {
             bot.sendMessage(referrerId, `🎉 صديق جديد انضم من رابطك! حصلت على 500 ORE`);
-          } catch (e) { /* المستخدم أوقف البوت */ }
+          } catch (e) { }
         }
       }
     }
 
     bot.sendMessage(chatId,
-      `🎮 <b>أهلاً وسهلاً في Deep Vein!</b>\n\n` +
-      `⛏️ ابدأ التعدين الآن واحقق أرباح حقيقية!\n\n` +
-      `💎 اشتري VIP و ORE بـ Telegram Stars (دفع فوري وآمن 100%)`,
+      `🎮 <b>أهلاً في Deep Vein!</b>\n\n⛏️ ابدأ التعدين وحقق أرباح!`,
       {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             [{ text: '🎮 لعب الآن', url: `${GAME_URL}?id=${userId}` }],
-            [{ text: '⭐ متجر Stars', callback_data: 'shop_stars' }],
             [{ text: '👥 اشرح صديقك', callback_data: 'referral' }],
             [{ text: '📊 إحصائياتي', callback_data: 'stats' }]
           ]
@@ -74,20 +57,38 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
     );
   } catch (e) {
     console.error('Error in /start:', e);
-    bot.sendMessage(chatId, '❌ حدث خطأ، حاول لاحقاً');
+    bot.sendMessage(chatId, '❌ حدث خطأ');
   }
 });
 
-// ============= Callback Queries =============
-// ملف stars-payment.js يتكفل بـ كل callback queries (including buy_* و referral و stats)
-// في الملف الجديد stars-payment.js ستجد handler واحد لـ callback_query يتكفل بكل الأزرار
-// هنا ما نسجل callback_query عشان ما يحصل تضارب
+bot.on('callback_query', async (query) => {
+  const chatId = query.message.chat.id;
+  const userId = query.from.id.toString();
+  const data = query.data;
 
-// ============= معالجات دفع Stars (يُتعامل معها في stars-payment.js) =============
-// لا تضيف معالجات إضافية هنا — stars-payment.js يتكفل بـ:
-// - bot.on('pre_checkout_query')
-// - bot.on('successful_payment')
+  try {
+    if (data === 'referral') {
+      const link = `https://t.me/${BOT_USERNAME}?start=${userId}`;
+      bot.sendMessage(chatId,
+        `🔗 رابطك:\n<code>${link}</code>\n\n500 ORE لكل صديق`,
+        { parse_mode: 'HTML' }
+      );
+    } else if (data === 'stats') {
+      const { data: user } = await supabase.from('users').select('*').eq('telegram_id', userId).single();
+      if (user) {
+        bot.sendMessage(chatId,
+          `📊 إحصائياتك:\n⛏️ ORE: ${user.ore}\n💪 الطاقة: ${user.energy}/${user.max_energy}`,
+          { parse_mode: 'HTML' }
+        );
+      }
+    }
+    bot.answerCallbackQuery(query.id);
+  } catch (e) {
+    console.error('Callback error:', e);
+    bot.answerCallbackQuery(query.id, '❌ خطأ', true);
+  }
+});
 
-console.log('✅ Bot initialized successfully');
+console.log('✅ Bot initialized');
 
 module.exports = bot;
