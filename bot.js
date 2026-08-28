@@ -49,7 +49,7 @@ function setupBot(app) {
           parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
-              [{ text: '🎮 لعب الآن', url: `${GAME_URL}?id=${userId}` }],
+              [{ text: '🎮 لعب الآن', web_app: { url: `${GAME_URL}?id=${userId}` } }],
               [{ text: '👥 اشرح صديقك', callback_data: 'referral' }],
               [{ text: '📊 إحصائياتي', callback_data: 'stats' }]
             ]
